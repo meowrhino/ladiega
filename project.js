@@ -112,9 +112,14 @@ function setupEventListeners() {
         videoElement.muted = volume === 0;
     });
 
-    // Prevent back button from triggering overlay toggle
+    // Prevent back button from triggering overlay toggle and add fade out
     document.querySelector('.back-btn').addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
+        document.body.classList.add('fade-out');
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 500);
     });
 }
 

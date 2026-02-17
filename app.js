@@ -86,7 +86,59 @@ function updateSelectedProject(index) {
 
 // Navigate to project page
 function navigateToProject(slug) {
-    window.location.href = `project.html?slug=${slug}`;
+    document.body.classList.add('fade-out');
+    setTimeout(() => {
+        window.location.href = `project.html?slug=${slug}`;
+    }, 500);
+}
+
+// Random button with roulette animation
+function randomProject() {
+    const randomBtn = document.getElementById('randomBtn');
+    const items = document.querySelectorAll('.project-item');
+    
+    if (items.length === 0) return;
+
+    // Disable button during animation
+    randomBtn.disabled = true;
+    randomBtn.style.opacity = '0.5';
+
+    // Roulette animation: cycle through projects
+    let currentIndex = 0;
+    let iterations = 0;
+    const maxIterations = 15 + Math.floor(Math.random() * 10); // 15-25 iterations
+    const baseDelay = 50;
+    
+    function rouletteStep() {
+        // Remove previous selection
+        items.forEach(item => item.classList.remove('selected'));
+        
+        // Highlight current
+        items[currentIndex].classList.add('selected');
+        
+        // Move to next
+        currentIndex = (currentIndex + 1) % items.length;
+        iterations++;
+        
+        if (iterations < maxIterations) {
+            // Slow down progressively
+            const delay = baseDelay + (iterations * 10);
+            setTimeout(rouletteStep, delay);
+        } else {
+            // Final selection
+            const finalIndex = Math.floor(Math.random() * items.length);
+            items.forEach(item => item.classList.remove('selected'));
+            items[finalIndex].classList.add('selected');
+            
+            // Navigate to selected project
+            setTimeout(() => {
+                const slug = visibleProjects[finalIndex].slug;
+                navigateToProject(slug);
+            }, 500);
+        }
+    }
+    
+    rouletteStep();
 }
 
 // Setup event listeners
@@ -94,6 +146,12 @@ function setupEventListeners() {
     // Video ended - play next random video
     videoElement.addEventListener('ended', () => {
         playRandomVideo();
+    });
+
+    // Random button
+    const randomBtn = document.getElementById('randomBtn');
+    randomBtn.addEventListener('click', () => {
+        randomProject();
     });
 
     // Volume button toggle

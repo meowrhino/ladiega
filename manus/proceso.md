@@ -175,3 +175,58 @@ el marquee ahora tiene 6 repeticiones del título en lugar de 2, lo que hace que
 - `project.js` - refactorizado para manejar 6 spans del marquee
 
 ---
+
+## 17 feb 2026 - 13:00 - mejoras de diseño y UX
+
+### sinopsis
+implementación de mejoras importantes de diseño, experiencia de usuario y funcionalidades interactivas solicitadas por el usuario.
+
+### cambios realizados
+
+**centrado del menú:**
+el menú ahora está centrado tanto horizontal como verticalmente en la pantalla usando flexbox. se ha cambiado de `position: absolute` a `position: fixed` con `display: flex`, `align-items: center` y `justify-content: center`. el contenedor tiene `pointer-events: none` y solo el `#projectList` tiene `pointer-events: auto` para mantener la interactividad.
+
+**responsive mejorado:**
+ajustado el logo para que no tape el menú en móviles. el logo ahora tiene `top: 20px` en mobile y un tamaño reducido de 120px.
+
+**control de volumen rediseñado:**
+- slider ahora es vertical en lugar de horizontal
+- aparece arriba del botón (usando `order: -1`)
+- slider más bonito con `border-radius: 10px`, fondo semi-transparente
+- thumb más grande (16px) con sombra y efecto hover (scale 1.2)
+- posicionado en esquina abajo-derecha (20px, 20px)
+
+**purple 2 añadido:**
+cambiado `visible: false` a `visible: true` en data.json para que purple 2 aparezca en el menú.
+
+**botón back mejorado:**
+- ahora en negrita (`font-weight: bold`)
+- sin borde (`border: none`, `padding: 0`)
+- más pegado a la esquina (20px en desktop, 15px en mobile)
+- mantiene `mix-blend-mode: difference` para verse siempre
+
+**botón random con animación de ruleta:**
+- nuevo botón "random" abajo-izquierda en la home
+- al hacer click, la manita (emoji 👉) se mueve como una ruleta
+- cicla por todos los proyectos con velocidad decreciente (15-25 iteraciones)
+- delay progresivo para efecto de desaceleración
+- al final selecciona uno aleatorio y navega a él
+- botón deshabilitado durante la animación
+
+**transiciones fluidas:**
+- añadido fade out (opacity 0.5s) al navegar entre páginas
+- aplicado tanto en home → proyecto como proyecto → home
+- clase `.fade-out` en body con transición CSS
+- delay de 500ms antes de cambiar de página para que se vea la animación
+
+### archivos modificados
+
+- `index.html` - añadido botón random
+- `project.html` - sin cambios estructurales
+- `styles.css` - centrado menú, slider vertical, botón random, transiciones
+- `project-styles.css` - botón back mejorado, slider vertical, transiciones
+- `app.js` - función randomProject con animación de ruleta, fade out en navegación
+- `project.js` - fade out en botón back
+- `data.json` - purple 2 visible
+
+---

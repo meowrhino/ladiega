@@ -52,7 +52,7 @@
     {
       "slug": "purple-project-2",
       "title": "purple 2",
-      "visible": false,
+      "visible": true,
       "description": "experimental audiovisual piece - work in progress",
       "videoPath": "data/projects/purple2/video.webm"
     },
