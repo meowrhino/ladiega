@@ -230,3 +230,37 @@ cambiado `visible: false` a `visible: true` en data.json para que purple 2 apare
 - `data.json` - purple 2 visible
 
 ---
+
+## 17 feb 2026 - 13:30 - correcciones finales
+
+### sinopsis
+correcciones de bugs y ajustes finales solicitados por el usuario tras la primera revisión.
+
+### cambios realizados
+
+**centrado vertical del menú corregido:**
+el problema era que el logo tenía `position: absolute`, lo que afectaba el flujo del documento. se cambió a `position: fixed` para que el menú con `display: flex` y `align-items: center` funcione correctamente y esté centrado verticalmente.
+
+**botón random rediseñado:**
+- cambiado de texto "random" a icono SVG shuffle
+- tamaño 40x40px con `mix-blend-mode: difference`
+- funcionalidad modificada: ahora cambia el vídeo de fondo en la home en lugar de navegar al proyecto
+- animación de spin al hacer click
+- selecciona un vídeo diferente al actual
+
+**fundido a negro en transiciones:**
+el usuario no quería el fundido a blanco. se implementó un overlay negro usando `body::before` con:
+- `background: #000`
+- `opacity: 0` por defecto
+- `opacity: 1` cuando tiene clase `.fade-out`
+- `z-index: 9999` para estar por encima de todo
+- transición de 0.5s
+
+### archivos modificados
+
+- `index.html` - botón random con SVG shuffle
+- `styles.css` - logo fixed, botón random con SVG, fundido a negro
+- `project-styles.css` - fundido a negro
+- `app.js` - función randomProject modificada para cambiar vídeo
+
+---

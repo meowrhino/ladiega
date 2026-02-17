@@ -92,53 +92,35 @@ function navigateToProject(slug) {
     }, 500);
 }
 
-// Random button with roulette animation
+// Random button - change background video
 function randomProject() {
     const randomBtn = document.getElementById('randomBtn');
-    const items = document.querySelectorAll('.project-item');
     
-    if (items.length === 0) return;
+    if (visibleProjects.length === 0) return;
 
-    // Disable button during animation
-    randomBtn.disabled = true;
-    randomBtn.style.opacity = '0.5';
-
-    // Roulette animation: cycle through projects
-    let currentIndex = 0;
-    let iterations = 0;
-    const maxIterations = 15 + Math.floor(Math.random() * 10); // 15-25 iterations
-    const baseDelay = 50;
+    // Add spinning animation
+    randomBtn.classList.add('spinning');
     
-    function rouletteStep() {
-        // Remove previous selection
-        items.forEach(item => item.classList.remove('selected'));
-        
-        // Highlight current
-        items[currentIndex].classList.add('selected');
-        
-        // Move to next
-        currentIndex = (currentIndex + 1) % items.length;
-        iterations++;
-        
-        if (iterations < maxIterations) {
-            // Slow down progressively
-            const delay = baseDelay + (iterations * 10);
-            setTimeout(rouletteStep, delay);
-        } else {
-            // Final selection
-            const finalIndex = Math.floor(Math.random() * items.length);
-            items.forEach(item => item.classList.remove('selected'));
-            items[finalIndex].classList.add('selected');
-            
-            // Navigate to selected project
-            setTimeout(() => {
-                const slug = visibleProjects[finalIndex].slug;
-                navigateToProject(slug);
-            }, 500);
-        }
-    }
+    // Select random project different from current
+    let randomIndex;
+    do {
+        randomIndex = Math.floor(Math.random() * visibleProjects.length);
+    } while (randomIndex === currentVideoIndex && visibleProjects.length > 1);
     
-    rouletteStep();
+    // Change video
+    currentVideoIndex = randomIndex;
+    const project = visibleProjects[currentVideoIndex];
+    videoElement.src = project.videoPath;
+    videoElement.load();
+    videoElement.play();
+    
+    // Update current project indicator
+    updateCurrentProject();
+    
+    // Remove spinning animation
+    setTimeout(() => {
+        randomBtn.classList.remove('spinning');
+    }, 500);
 }
 
 // Setup event listeners
