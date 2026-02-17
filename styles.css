@@ -91,6 +91,7 @@ body.fade-out::before {
     justify-content: center;
     z-index: 10;
     pointer-events: none;
+    padding-top: 100px;
 }
 
 #projectList {
