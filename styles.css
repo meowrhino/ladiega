@@ -51,13 +51,10 @@ body {
     z-index: 10;
 }
 
-.logo-placeholder {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 20px 60px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    font-size: 18px;
-    letter-spacing: 2px;
-    text-transform: lowercase;
+.logo-image {
+    max-width: 200px;
+    height: auto;
+    filter: invert(1);
 }
 
 /* Menu */
@@ -180,9 +177,8 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .logo-placeholder {
-        font-size: 14px;
-        padding: 15px 40px;
+    .logo-image {
+        max-width: 150px;
     }
 
     .project-item {

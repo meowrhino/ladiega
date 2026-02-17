@@ -117,3 +117,29 @@ el sistema de navegación usa URL parameters para cargar proyectos específicos.
 el usuario puede ahora probar la web localmente y solicitar ajustes si es necesario. cuando esté listo, se puede hacer commit y push al repositorio de github.
 
 ---
+
+## 17 feb 2026 - 12:20 - añadir logo y favicon
+
+### sinopsis
+generación de logo minimalista gráfico y configuración de favicon para la web.
+
+### cambios realizados
+
+**logo generado:**
+- diseño minimalista con las letras "LD" en forma geométrica
+- estilo moderno y profesional
+- formato PNG con fondo transparente
+- guardado en `data/logo.png`
+
+**integración en la web:**
+- reemplazado placeholder de texto por imagen del logo
+- añadido favicon (navicon.png) en ambas páginas (index.html y project.html)
+- estilos actualizados para mostrar el logo con tamaño responsive
+- filtro invert(1) aplicado para que el logo blanco se vea bien sobre el velo oscuro
+
+**archivos modificados:**
+- `index.html` - favicon y logo
+- `project.html` - favicon
+- `styles.css` - estilos del logo
+
+---
