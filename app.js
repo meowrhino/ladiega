@@ -69,14 +69,7 @@ function playRandomVideo() {
     videoElement.play();
 
     // Update UI
-    updateNowPlaying(project.title);
     updateSelectedProject(currentProjectIndex);
-}
-
-// Update "now playing" text
-function updateNowPlaying(title) {
-    const nowPlayingTitle = document.getElementById('nowPlayingTitle');
-    nowPlayingTitle.textContent = title;
 }
 
 // Update selected project in menu

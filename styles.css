@@ -26,6 +26,9 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
+    min-width: 100%;
+    min-height: 100%;
 }
 
 .veil {
@@ -71,7 +74,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    margin-bottom: 40px;
 }
 
 .project-item {
@@ -96,11 +98,7 @@ body {
     left: -40px;
 }
 
-.now-playing {
-    font-size: 14px;
-    opacity: 0.7;
-    text-transform: lowercase;
-}
+
 
 /* Volume control */
 .volume-control {
@@ -130,10 +128,10 @@ body {
     transform: scale(1.1);
 }
 
-.volume-btn img {
+.volume-btn svg {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    color: #fff;
 }
 
 .volume-slider {

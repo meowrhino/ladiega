@@ -17,8 +17,12 @@
     <!-- Marquee title -->
     <div id="marqueeContainer" class="marquee-container">
         <div class="marquee">
-            <span id="marqueeText"></span>
+            <span id="marqueeText1"></span>
             <span id="marqueeText2"></span>
+            <span id="marqueeText3"></span>
+            <span id="marqueeText4"></span>
+            <span id="marqueeText5"></span>
+            <span id="marqueeText6"></span>
         </div>
     </div>
 
@@ -31,7 +35,10 @@
     <!-- Volume control -->
     <div class="volume-control">
         <button id="volumeBtn" class="volume-btn">
-            <img src="data/navicon.png" alt="volume">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path id="volumeIcon" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
         </button>
         <div id="volumeSlider" class="volume-slider hidden">
             <input type="range" id="volumeRange" min="0" max="100" value="0">

@@ -3,8 +3,7 @@ let project = null;
 let videoElement = null;
 let veil = null;
 let marqueeContainer = null;
-let marqueeText = null;
-let marqueeText2 = null;
+let marqueeTexts = [];
 let description = null;
 let volumeBtn = null;
 let volumeSlider = null;
@@ -38,8 +37,10 @@ async function init() {
     videoElement = document.getElementById('bgVideo');
     veil = document.getElementById('veil');
     marqueeContainer = document.getElementById('marqueeContainer');
-    marqueeText = document.getElementById('marqueeText');
-    marqueeText2 = document.getElementById('marqueeText2');
+    // Get all marquee text spans
+    for (let i = 1; i <= 6; i++) {
+        marqueeTexts.push(document.getElementById(`marqueeText${i}`));
+    }
     description = document.getElementById('description');
     volumeBtn = document.getElementById('volumeBtn');
     volumeSlider = document.getElementById('volumeSlider');
@@ -59,9 +60,10 @@ function loadProject() {
     videoElement.load();
     videoElement.play();
 
-    // Set marquee text (duplicate for seamless loop)
-    marqueeText.textContent = project.title;
-    marqueeText2.textContent = project.title;
+    // Set marquee text (multiple repetitions for seamless loop)
+    marqueeTexts.forEach(span => {
+        span.textContent = project.title;
+    });
 
     // Set description
     description.textContent = project.description;
