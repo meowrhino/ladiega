@@ -1,0 +1,235 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: pointer;
+}
+
+/* Video background */
+.video-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+#bgVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.veil {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+}
+
+.veil.hidden {
+    opacity: 0;
+}
+
+/* Marquee */
+.marquee-container {
+    position: fixed;
+    top: 40px;
+    left: 0;
+    width: 100%;
+    overflow: hidden;
+    z-index: 10;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.marquee-container.hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+}
+
+.marquee {
+    display: flex;
+    white-space: nowrap;
+    animation: scroll 20s linear infinite;
+}
+
+.marquee span {
+    font-size: 48px;
+    font-weight: 300;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding-right: 100px;
+}
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* Description */
+.description {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    font-size: 24px;
+    text-align: center;
+    max-width: 600px;
+    line-height: 1.6;
+    letter-spacing: 1px;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.description.hidden {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(20px);
+}
+
+/* Back button */
+.back-btn {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    z-index: 20;
+    font-size: 18px;
+    text-decoration: none;
+    color: #fff;
+    padding: 10px 20px;
+    border: 1px solid #fff;
+    background: transparent;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+    mix-blend-mode: difference;
+    text-transform: lowercase;
+    letter-spacing: 1px;
+}
+
+.back-btn:hover {
+    opacity: 0.7;
+}
+
+/* Volume control */
+.volume-control {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.volume-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+
+.volume-btn:hover {
+    transform: scale(1.1);
+}
+
+.volume-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.volume-slider {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.volume-slider.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(20px);
+}
+
+#volumeRange {
+    width: 100px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.3);
+    outline: none;
+    border-radius: 2px;
+}
+
+#volumeRange::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+#volumeRange::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    cursor: pointer;
+    border-radius: 50%;
+    border: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .marquee span {
+        font-size: 32px;
+        padding-right: 60px;
+    }
+
+    .description {
+        font-size: 18px;
+        max-width: 90%;
+        padding: 0 20px;
+    }
+
+    .back-btn {
+        bottom: 20px;
+        left: 20px;
+        font-size: 16px;
+        padding: 8px 16px;
+    }
+
+    .volume-control {
+        bottom: 20px;
+        right: 20px;
+    }
+
+    .volume-btn {
+        width: 35px;
+        height: 35px;
+    }
+
+    #volumeRange {
+        width: 80px;
+    }
+}

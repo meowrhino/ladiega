@@ -1,0 +1,67 @@
+{
+  "projects": [
+    {
+      "slug": "adolfo-dominguez-ss23",
+      "title": "adolfo dominguez - SS23",
+      "visible": true,
+      "description": "music composition for adolfo dominguez",
+      "videoPath": "data/projects/adolfoDominguez/video.webm"
+    },
+    {
+      "slug": "massimo-duti-jeans",
+      "title": "masssimo duti jeans x jeans",
+      "visible": true,
+      "description": "sound design and music composition for massimo dutti denim campaign",
+      "videoPath": "data/projects/massimoDutti/video.webm"
+    },
+    {
+      "slug": "menudas-piezas-trailer",
+      "title": "menudas piezas trailer",
+      "visible": true,
+      "description": "original soundtrack for menudas piezas documentary trailer",
+      "videoPath": "data/projects/menudasPiezas/video.webm"
+    },
+    {
+      "slug": "nike-campaign",
+      "title": "nike",
+      "visible": true,
+      "description": "sound design for nike sports campaign",
+      "videoPath": "data/projects/nike/video.webm"
+    },
+    {
+      "slug": "pacsun-summer",
+      "title": "pacsun",
+      "visible": true,
+      "description": "music composition for pacsun summer collection",
+      "videoPath": "data/projects/pacsun/video.webm"
+    },
+    {
+      "slug": "pull-and-bear",
+      "title": "pull & bear",
+      "visible": true,
+      "description": "sound design and music for pull & bear campaign",
+      "videoPath": "data/projects/pullAndBear/video.webm"
+    },
+    {
+      "slug": "purple-project-1",
+      "title": "purple 1",
+      "visible": true,
+      "description": "experimental audiovisual piece",
+      "videoPath": "data/projects/purple1/video.webm"
+    },
+    {
+      "slug": "purple-project-2",
+      "title": "purple 2",
+      "visible": false,
+      "description": "experimental audiovisual piece - work in progress",
+      "videoPath": "data/projects/purple2/video.webm"
+    },
+    {
+      "slug": "timberland-outdoor",
+      "title": "timberland",
+      "visible": true,
+      "description": "music composition for timberland outdoor collection",
+      "videoPath": "data/projects/timberland/video.webm"
+    }
+  ]
+}

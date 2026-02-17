@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>la diega - project</title>
+    <link rel="stylesheet" href="project-styles.css">
+</head>
+<body>
+    <!-- Video background -->
+    <div class="video-container">
+        <video id="bgVideo" autoplay muted loop playsinline></video>
+        <div id="veil" class="veil"></div>
+    </div>
+
+    <!-- Marquee title -->
+    <div id="marqueeContainer" class="marquee-container">
+        <div class="marquee">
+            <span id="marqueeText"></span>
+            <span id="marqueeText2"></span>
+        </div>
+    </div>
+
+    <!-- Description -->
+    <div id="description" class="description"></div>
+
+    <!-- Back button -->
+    <a href="index.html" class="back-btn">back</a>
+
+    <!-- Volume control -->
+    <div class="volume-control">
+        <button id="volumeBtn" class="volume-btn">
+            <img src="data/navicon.png" alt="volume">
+        </button>
+        <div id="volumeSlider" class="volume-slider hidden">
+            <input type="range" id="volumeRange" min="0" max="100" value="0">
+        </div>
+    </div>
+
+    <script src="project.js"></script>
+</body>
+</html>

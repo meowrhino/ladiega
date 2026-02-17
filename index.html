@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>la diega</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Video background -->
+    <div class="video-container">
+        <video id="bgVideo" autoplay muted playsinline></video>
+        <div class="veil"></div>
+    </div>
+
+    <!-- Logo -->
+    <div class="logo">
+        <div class="logo-placeholder">logo la diega</div>
+    </div>
+
+    <!-- Menu -->
+    <nav class="menu">
+        <div id="projectList"></div>
+        <div class="now-playing">now playing - <span id="nowPlayingTitle">[nombre video]</span></div>
+    </nav>
+
+    <!-- Volume control -->
+    <div class="volume-control">
+        <button id="volumeBtn" class="volume-btn">
+            <img src="data/navicon.png" alt="volume">
+        </button>
+        <div id="volumeSlider" class="volume-slider hidden">
+            <input type="range" id="volumeRange" min="0" max="100" value="0">
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
