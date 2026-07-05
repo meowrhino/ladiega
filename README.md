@@ -8,13 +8,11 @@ web minimalista para portfolio de proyectos audiovisuales con vídeos de fondo.
 - menú de navegación por proyectos
 - control de volumen interactivo
 - efectos visuales con velo de opacidad
-- marquee animado en páginas de proyecto
 - diseño responsive
 
 ## estructura
 
-- `index.html` - página principal con menú
-- `project.html` - página de proyecto individual
+- `index.html` - página principal con menú (los vídeos se abren en un modal)
 - `data.json` - datos de proyectos
 - `data/projects/` - vídeos en formato webm
 
