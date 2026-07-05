@@ -5,46 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>la diega</title>
     <link rel="icon" type="image/png" href="data/navicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Video background -->
-    <div class="video-container">
-        <video id="bgVideo" autoplay muted playsinline></video>
-        <div class="veil"></div>
-    </div>
-
     <!-- Logo -->
     <div class="logo">
-        <img src="data/logo.png" alt="la diega" class="logo-image">
+        <img src="data/logo-fantasy.png" alt="la diega" class="logo-image">
     </div>
 
-    <!-- Menu -->
-    <nav class="menu">
-        <div id="projectList"></div>
-    </nav>
+    <!-- Barra de menu (music / brands / about) -->
+    <nav id="menuBar" class="window menu-bar" aria-label="menu principal"></nav>
 
-    <!-- Random button -->
-    <button id="randomBtn" class="random-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="16 3 21 3 21 8"></polyline>
-            <line x1="4" y1="20" x2="21" y2="3"></line>
-            <polyline points="21 16 21 21 16 21"></polyline>
-            <line x1="15" y1="15" x2="21" y2="21"></line>
-            <line x1="4" y1="4" x2="9" y2="9"></line>
-        </svg>
-    </button>
+    <!-- Panel lateral con la lista de la categoria -->
+    <aside id="sidePanel" class="window side-panel hidden" aria-label="lista de proyectos">
+        <div class="panel-header">
+            <span id="sidePanelTitle" class="panel-title"></span>
+            <button id="sidePanelClose" class="close-btn" aria-label="cerrar">×</button>
+        </div>
+        <div id="sideList" class="side-list"></div>
+    </aside>
+
+    <!-- Ventana de contenido (fichas de proyecto / about) -->
+    <section id="contentWindow" class="window content-window hidden" aria-label="proyectos">
+        <div class="panel-header">
+            <span id="contentTitle" class="panel-title"></span>
+            <button id="contentClose" class="close-btn" aria-label="cerrar">×</button>
+        </div>
+        <div id="contentBody" class="content-body"></div>
+    </section>
+
+    <!-- Modal de video -->
+    <div id="videoModal" class="video-modal hidden">
+        <div class="modal-frame">
+            <button id="modalClose" class="modal-close" aria-label="cerrar video">×</button>
+            <video id="modalVideo" controls playsinline></video>
+        </div>
+    </div>
+
+    <!-- Cursor manita -->
+    <img id="handCursor" class="hand-cursor" src="data/icons/hand.svg" alt="" aria-hidden="true">
 
     <!-- Volume control -->
     <div class="volume-control">
-        <button id="volumeBtn" class="volume-btn">
+        <button id="volumeBtn" class="volume-btn" aria-label="volumen">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                 <path id="volumeIcon" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
             </svg>
         </button>
         <div id="volumeSlider" class="volume-slider hidden">
-            <input type="range" id="volumeRange" min="0" max="100" value="0">
+            <input type="range" id="volumeRange" min="0" max="100" value="40">
         </div>
     </div>
 

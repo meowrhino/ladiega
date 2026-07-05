@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- Final Fantasy style: dark blue bg with lighter border lines -->
+  <defs>
+    <linearGradient id="ffgrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#06061a"/>
+      <stop offset="100%" stop-color="#0e0e2a"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer fill -->
+  <rect x="0" y="0" width="48" height="48" rx="0" fill="url(#ffgrad)"/>
+  <!-- Outer bright border -->
+  <rect x="1" y="1" width="46" height="46" rx="0" fill="none" stroke="#6666aa" stroke-width="1.5"/>
+  <!-- Inner subtle border -->
+  <rect x="4" y="4" width="40" height="40" rx="0" fill="none" stroke="#333366" stroke-width="0.5"/>
+  <!-- Inner fill (darker, subtler) -->
+  <rect x="5" y="5" width="38" height="38" fill="#080818"/>
+</svg>
