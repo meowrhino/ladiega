@@ -12,7 +12,7 @@ let activeItem = null;     // marca/proyecto abierto en la ventana de contenido
 // Elementos
 let handCursor;
 let menuBar, sidePanel, sidePanelTitle, sideList, contentWindow, contentTitle, contentBody;
-let videoModal, modalVideo;
+let videoModal, modalVideo, modalFrame, modalIframe;
 let volumeBtn, volumeSlider, volumeRange;
 
 const isTouch = window.matchMedia('(pointer: coarse)').matches;
@@ -31,6 +31,8 @@ async function init() {
     contentBody = document.getElementById('contentBody');
     videoModal = document.getElementById('videoModal');
     modalVideo = document.getElementById('modalVideo');
+    modalFrame = document.getElementById('modalFrame');
+    modalIframe = document.getElementById('modalIframe');
     volumeBtn = document.getElementById('volumeBtn');
     volumeSlider = document.getElementById('volumeSlider');
     volumeRange = document.getElementById('volumeRange');
@@ -82,15 +84,20 @@ function playSfx(type) {
 
 /* ===== Cursor manita ===== */
 
+// ultimo elemento apuntado: la manita se queda donde paso el cursor por ultima vez
+let handEl = null;
+
 function placeHand(el) {
     if (isTouch || !el || el.offsetParent === null && el.getBoundingClientRect().width === 0) {
         handCursor.classList.add('hidden');
+        handEl = null;
         return;
     }
+    handEl = el;
     const rect = el.getBoundingClientRect();
     handCursor.classList.remove('hidden');
-    handCursor.style.left = (rect.left - 36) + 'px';
-    handCursor.style.top = (rect.top + rect.height / 2 - 11) + 'px';
+    handCursor.style.left = (rect.left - 38) + 'px';
+    handCursor.style.top = (rect.top + rect.height / 2 - 9) + 'px';
 }
 
 function getSelectedElement() {
@@ -145,9 +152,8 @@ function renderMenuBar() {
             setSelection(menuBar, i, { silent: true });
             toggleCategory(entry.slug);
         });
-        btn.addEventListener('mouseenter', () => {
-            if (level === 'menu') setSelection(menuBar, i);
-        });
+        // la manita sigue siempre al cursor, aunque haya una ventana abierta
+        btn.addEventListener('mouseenter', () => setSelection(menuBar, i, { focus: false }));
         menuBar.appendChild(btn);
     });
 }
@@ -205,9 +211,7 @@ function openCategory(slug) {
             setSelection(sideList, i, { silent: true });
             openItem(item);
         });
-        btn.addEventListener('mouseenter', () => {
-            if (level === 'list') setSelection(sideList, i);
-        });
+        btn.addEventListener('mouseenter', () => setSelection(sideList, i, { focus: false }));
         sideList.appendChild(btn);
     });
     sidePanel.classList.remove('hidden');
@@ -250,12 +254,21 @@ function openItem(item) {
 
         const thumb = document.createElement('span');
         thumb.className = 'card-thumb';
-        const vid = document.createElement('video');
-        vid.src = project.videoPath;
-        vid.preload = 'metadata';
-        vid.muted = true;
-        vid.playsInline = true;
-        thumb.appendChild(vid);
+        if (project.videoPath) {
+            const vid = document.createElement('video');
+            vid.src = project.videoPath;
+            vid.preload = 'metadata';
+            vid.muted = true;
+            vid.playsInline = true;
+            thumb.appendChild(vid);
+        } else if (project.embedUrl) {
+            // enlace externo sin video: miniatura con el nombre de la plataforma
+            const label = document.createElement('span');
+            label.className = 'thumb-embed-label';
+            label.textContent = project.embedUrl.includes('spotify') ? 'spotify'
+                : (project.embedUrl.includes('youtu') ? 'youtube' : 'link');
+            thumb.appendChild(label);
+        }
         const overlay = document.createElement('span');
         overlay.className = 'play-overlay';
         thumb.appendChild(overlay);
@@ -285,9 +298,7 @@ function openItem(item) {
             setSelection(contentBody, i, { silent: true });
             openModal(project);
         });
-        card.addEventListener('mouseenter', () => {
-            if (level === 'content') setSelection(contentBody, i);
-        });
+        card.addEventListener('mouseenter', () => setSelection(contentBody, i, { focus: false }));
         contentBody.appendChild(card);
     });
 
@@ -329,15 +340,36 @@ function openAbout() {
     placeHand(null);
 }
 
-/* ===== Modal de video ===== */
+/* ===== Modal de video / embed ===== */
+
+// convierte enlaces normales de youtube/spotify en su version embed
+function toEmbedUrl(url) {
+    let m = url.match(/youtu\.be\/([\w-]+)/) || url.match(/youtube\.com\/watch\?.*v=([\w-]+)/);
+    if (m) return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1';
+    m = url.match(/open\.spotify\.com\/(?:intl-\w+\/)?(track|album|playlist|artist|episode|show)\/(\w+)/);
+    if (m) return 'https://open.spotify.com/embed/' + m[1] + '/' + m[2];
+    return url;
+}
 
 function openModal(project) {
     playSfx('select');
-    modalVideo.src = project.videoPath;
-    modalVideo.muted = false;
-    modalVideo.volume = 1;
+    modalFrame.classList.remove('embed-video', 'embed-spotify');
+    if (project.embedUrl) {
+        // enlace externo (spotify / youtube) dentro del mismo marco
+        const url = toEmbedUrl(project.embedUrl);
+        modalFrame.classList.add(url.includes('spotify') ? 'embed-spotify' : 'embed-video');
+        modalIframe.src = url;
+        modalIframe.classList.remove('hidden');
+        modalVideo.classList.add('hidden');
+    } else {
+        modalVideo.src = project.videoPath;
+        modalVideo.muted = false;
+        modalVideo.volume = 1;
+        modalVideo.classList.remove('hidden');
+        modalIframe.classList.add('hidden');
+    }
     videoModal.classList.remove('hidden');
-    modalVideo.play();
+    if (!project.embedUrl) modalVideo.play();
     level = 'modal';
     document.getElementById('modalClose').focus({ preventScroll: true });
     placeHand(null);
@@ -347,6 +379,7 @@ function stopModal() {
     modalVideo.pause();
     modalVideo.removeAttribute('src');
     modalVideo.load();
+    modalIframe.removeAttribute('src');
 }
 
 function closeModal() {
@@ -433,10 +466,10 @@ function setupEventListeners() {
         }
     });
 
-    // la manita sigue a la seleccion aunque cambie el layout
-    window.addEventListener('resize', () => placeHand(getSelectedElement()));
-    sideList.addEventListener('scroll', () => placeHand(getSelectedElement()));
-    contentBody.addEventListener('scroll', () => placeHand(getSelectedElement()));
+    // la manita sigue al ultimo elemento apuntado aunque cambie el layout
+    window.addEventListener('resize', () => placeHand(handEl || getSelectedElement()));
+    sideList.addEventListener('scroll', () => placeHand(handEl || getSelectedElement()));
+    contentBody.addEventListener('scroll', () => placeHand(handEl || getSelectedElement()));
 }
 
 document.addEventListener('DOMContentLoaded', init);

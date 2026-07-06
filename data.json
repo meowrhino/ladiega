@@ -5,6 +5,34 @@
       "label": "music",
       "items": [
         {
+          "slug": "samantha",
+          "name": "Samantha",
+          "visible": false,
+          "projects": [
+            {
+              "title": "SAMANTHA",
+              "job": "",
+              "studio": "",
+              "embedUrl": "PEGA_AQUI_EL_ENLACE_DE_SPOTIFY_O_YOUTUBE",
+              "visible": true
+            }
+          ]
+        },
+        {
+          "slug": "amor-butano",
+          "name": "Amor Butano",
+          "visible": false,
+          "projects": [
+            {
+              "title": "AMOR BUTANO",
+              "job": "",
+              "studio": "",
+              "embedUrl": "PEGA_AQUI_EL_ENLACE_DE_SPOTIFY_O_YOUTUBE",
+              "visible": true
+            }
+          ]
+        },
+        {
           "slug": "menudas-piezas",
           "name": "Menudas Piezas",
           "visible": true,

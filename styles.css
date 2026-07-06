@@ -42,7 +42,32 @@ body {
 /* ===== Ventanas 9-slice ===== */
 .window {
     border: 16px solid transparent;
-    border-image: var(--frame) 16 fill / 16px / 0 stretch;
+    border-image: var(--frame) 16 / 16px / 0 stretch;
+    /* fondo oscurito con degradado por bandas (posterizado) */
+    background: linear-gradient(180deg,
+        #2b2b62 0%, #2b2b62 16%,
+        #23234f 16%, #23234f 32%,
+        #1b1b40 32%, #1b1b40 48%,
+        #141432 48%, #141432 65%,
+        #0e0e24 65%, #0e0e24 82%,
+        #080818 82%, #080818 100%);
+    /* recorte con las mismas esquinas redondeadas pixeladas que el marco */
+    clip-path: polygon(
+        6px 0, calc(100% - 6px) 0,
+        calc(100% - 6px) 2px, calc(100% - 4px) 2px,
+        calc(100% - 4px) 4px, calc(100% - 2px) 4px,
+        calc(100% - 2px) 6px, 100% 6px,
+        100% calc(100% - 6px), calc(100% - 2px) calc(100% - 6px),
+        calc(100% - 2px) calc(100% - 4px), calc(100% - 4px) calc(100% - 4px),
+        calc(100% - 4px) calc(100% - 2px), calc(100% - 6px) calc(100% - 2px),
+        calc(100% - 6px) 100%, 6px 100%,
+        6px calc(100% - 2px), 4px calc(100% - 2px),
+        4px calc(100% - 4px), 2px calc(100% - 4px),
+        2px calc(100% - 6px), 0 calc(100% - 6px),
+        0 6px, 2px 6px,
+        2px 4px, 4px 4px,
+        4px 2px, 6px 2px
+    );
     animation: windowIn 0.15s ease-out;
 }
 
@@ -159,7 +184,7 @@ body {
     border: none;
     color: var(--text);
     font-family: var(--font-game);
-    font-size: 24px;
+    font-size: 27px;
     line-height: 1.1;
     text-align: left;
     padding: 5px 4px;
@@ -230,6 +255,17 @@ body {
     height: 100%;
     object-fit: cover;
     display: block;
+}
+
+.thumb-embed-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    padding: 6px 8px;
+    font-size: 18px;
+    letter-spacing: 1px;
+    opacity: 0.7;
 }
 
 .play-overlay {
@@ -320,7 +356,8 @@ body {
 
 .modal-frame {
     position: relative;
-    width: min(880px, 92vw);
+    width: fit-content;
+    max-width: 92vw;
     background: #000;
     border: 6px solid #fff;
     border-radius: 14px;
@@ -328,10 +365,38 @@ body {
     animation: windowIn 0.15s ease-out;
 }
 
+/* los videos verticales no se salen de la pantalla */
 .modal-frame video {
-    width: 100%;
     display: block;
+    width: auto;
+    height: auto;
+    max-width: min(880px, 88vw);
+    max-height: 80vh;
+    min-width: min(320px, 80vw);
     border-radius: 6px;
+}
+
+.modal-frame video.hidden,
+.modal-frame iframe.hidden {
+    display: none;
+}
+
+/* embeds externos (spotify / youtube) con el mismo marco que los videos */
+.modal-frame iframe {
+    display: block;
+    border: none;
+    border-radius: 6px;
+    background: #000;
+}
+
+.modal-frame.embed-video iframe {
+    width: min(880px, 88vw);
+    aspect-ratio: 16 / 9;
+}
+
+.modal-frame.embed-spotify iframe {
+    width: min(660px, 88vw);
+    height: 352px;
 }
 
 .modal-close {
@@ -360,7 +425,7 @@ body {
 /* ===== Cursor manita ===== */
 .hand-cursor {
     position: fixed;
-    width: 28px;
+    width: 32px;
     height: auto;
     z-index: 200;
     pointer-events: none;

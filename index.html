@@ -39,9 +39,12 @@
 
     <!-- Modal de video -->
     <div id="videoModal" class="video-modal hidden">
-        <div class="modal-frame">
+        <div id="modalFrame" class="modal-frame">
             <button id="modalClose" class="modal-close" aria-label="cerrar video">×</button>
             <video id="modalVideo" controls playsinline></video>
+            <iframe id="modalIframe" class="hidden" title="reproductor externo"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                allowfullscreen></iframe>
         </div>
     </div>
 

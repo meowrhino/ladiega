@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <!-- Final Fantasy style: dark blue bg with lighter border lines -->
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" shape-rendering="crispEdges">
+  <!-- Marco estilo FF: borde plateado grueso con esquinas redondeadas pixeladas.
+       El interior queda transparente: el fondo por bandas lo pone el CSS (.window). -->
   <defs>
-    <linearGradient id="ffgrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#06061a"/>
-      <stop offset="100%" stop-color="#0e0e2a"/>
+    <linearGradient id="silver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f2f4ff"/>
+      <stop offset="45%" stop-color="#c3c8ee"/>
+      <stop offset="100%" stop-color="#8a92c8"/>
     </linearGradient>
   </defs>
-  <!-- Outer fill -->
-  <rect x="0" y="0" width="48" height="48" rx="0" fill="url(#ffgrad)"/>
-  <!-- Outer bright border -->
-  <rect x="1" y="1" width="46" height="46" rx="0" fill="none" stroke="#6666aa" stroke-width="1.5"/>
-  <!-- Inner subtle border -->
-  <rect x="4" y="4" width="40" height="40" rx="0" fill="none" stroke="#333366" stroke-width="0.5"/>
-  <!-- Inner fill (darker, subtler) -->
-  <rect x="5" y="5" width="38" height="38" fill="#080818"/>
+  <!-- linea oscura exterior (2px) -->
+  <path fill="#14142c" fill-rule="evenodd" d="M6 0 H42 V2 H44 V4 H46 V6 H48 V42 H46 V44 H44 V46 H42 V48 H6 V46 H4 V44 H2 V42 H0 V6 H2 V4 H4 V2 H6 Z M6 2 H42 V4 H44 V6 H46 V42 H44 V44 H42 V46 H6 V44 H4 V42 H2 V6 H4 V4 H6 Z"/>
+  <!-- banda clara (4px) -->
+  <path fill="url(#silver)" fill-rule="evenodd" d="M6 2 H42 V4 H44 V6 H46 V42 H44 V44 H42 V46 H6 V44 H4 V42 H2 V6 H4 V4 H6 Z M8 6 H40 V8 H42 V40 H40 V42 H8 V40 H6 V8 H8 Z"/>
+  <!-- linea interior de acento -->
+  <path fill="#3a3a6b" fill-rule="evenodd" d="M8 6 H40 V8 H42 V40 H40 V42 H8 V40 H6 V8 H8 Z M8 8 H40 V40 H8 Z"/>
 </svg>
