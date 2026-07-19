@@ -2,66 +2,56 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>la diega</title>
+    <meta name="description" content="la diega — music, sound design & sfx">
     <link rel="icon" type="image/png" href="data/navicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Logo -->
-    <div class="logo">
-        <img src="data/logo-fantasy.png" alt="la diega" class="logo-image">
-    </div>
-
-    <!-- Barra de menu (music / brands / about) -->
-    <nav id="menuBar" class="window menu-bar" aria-label="menu principal"></nav>
-
-    <!-- Panel lateral con la lista de la categoria -->
-    <aside id="sidePanel" class="window side-panel hidden" aria-label="lista de proyectos">
-        <div class="panel-header">
-            <span id="sidePanelTitle" class="panel-title"></span>
-            <button id="sidePanelClose" class="close-btn" aria-label="cerrar">×</button>
+    <!-- Carrusel: dos slides que se alternan para el desplazamiento -->
+    <div id="stage" class="stage">
+        <div class="slide" data-slide="a">
+            <video class="bg-video" muted playsinline preload="none"></video>
+            <video class="main-video" muted playsinline preload="auto"></video>
         </div>
-        <div id="sideList" class="side-list"></div>
-    </aside>
-
-    <!-- Ventana de contenido (fichas de proyecto / about) -->
-    <section id="contentWindow" class="window content-window hidden" aria-label="proyectos">
-        <div class="panel-header">
-            <span id="contentTitle" class="panel-title"></span>
-            <button id="contentClose" class="close-btn" aria-label="cerrar">×</button>
-        </div>
-        <div id="contentBody" class="content-body"></div>
-    </section>
-
-    <!-- Modal de video -->
-    <div id="videoModal" class="video-modal hidden">
-        <div id="modalFrame" class="modal-frame">
-            <button id="modalClose" class="modal-close" aria-label="cerrar video">×</button>
-            <video id="modalVideo" controls playsinline></video>
-            <iframe id="modalIframe" class="hidden" title="reproductor externo"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                allowfullscreen></iframe>
+        <div class="slide offright" data-slide="b">
+            <video class="bg-video" muted playsinline preload="none"></video>
+            <video class="main-video" muted playsinline preload="auto"></video>
         </div>
     </div>
 
-    <!-- Cursor manita -->
-    <img id="handCursor" class="hand-cursor" src="data/icons/hand.svg" alt="" aria-hidden="true">
+    <!-- Gestoria: foto de fondo en lugar del carrusel -->
+    <div id="gestoriaView" class="gestoria hidden">
+        <img id="gestoriaPhoto" src="" alt="la diega">
+    </div>
 
-    <!-- Volume control -->
-    <div class="volume-control">
-        <button id="volumeBtn" class="volume-btn" aria-label="volumen">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                <path id="volumeIcon" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            </svg>
-        </button>
-        <div id="volumeSlider" class="volume-slider hidden">
-            <input type="range" id="volumeRange" min="0" max="100" value="40">
-        </div>
+    <!-- La telita -->
+    <div class="veil"></div>
+
+    <!-- Esquinas: las tres abren el menu -->
+    <button id="menuBtn" class="ui" aria-label="abrir menú">menú</button>
+    <button id="brandBtn" class="ui" aria-label="abrir menú">la diega</button>
+    <button id="ficha" class="ui ficha" aria-label="abrir menú"></button>
+
+    <!-- Navegacion del video -->
+    <div id="controls" class="controls faded">
+        <button id="prevBtn" aria-label="video anterior">prev</button>
+        <button id="playBtn">pause</button>
+        <button id="nextBtn" aria-label="video siguiente">next</button>
+        <input id="seekBar" type="range" min="0" max="1000" value="0" aria-label="progreso">
+        <button id="autoBtn" class="toggle on" aria-label="avance automático">auto</button>
+        <button id="soundBtn" class="toggle" aria-label="sonido">sound</button>
+    </div>
+
+    <!-- Menu -->
+    <div id="menuOverlay" class="overlay hidden">
+        <nav id="menuNav" class="menu-nav" aria-label="menú principal"></nav>
+    </div>
+
+    <!-- About -->
+    <div id="aboutOverlay" class="overlay hidden">
+        <div id="aboutBody" class="about-body"></div>
     </div>
 
     <script src="app.js"></script>

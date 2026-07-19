@@ -1,22 +1,20 @@
 # la diega
 
-web minimalista para portfolio de proyectos audiovisuales con vídeos de fondo.
+portfolio audiovisual: un carrusel de videos a pantalla completa con una telita encima.
 
-## características
+## cómo funciona
 
-- vídeos de fondo en loop con reproducción aleatoria
-- menú de navegación por proyectos
-- control de volumen interactivo
-- efectos visuales con velo de opacidad
-- marquee animado en páginas de proyecto
-- diseño responsive
+- **home**: reproduce en cadena solo los videos con `"highlight": true`, cada uno de su `start` a su `finish`; al terminar pasa al siguiente con un desplazamiento lateral, y al llegar al final vuelve al principio sin que se note.
+- **esquinas**: "menú" (arriba-izquierda), "la diega" (arriba-derecha) y la ficha técnica (abajo-izquierda) abren el menú.
+- **navegación del video**: aparece al mover el ratón (escritorio) o tocar la pantalla (móvil): prev · play/pause · next · barra de reproducción · auto (avance automático, encendido por defecto) · sound. Si tocas un video, se ignora su bucle start/finish y se reproduce entero.
+- **menú**: home, categorías (un carrusel solo de esa categoría), proyectos sueltos (solo ese video, sin carrusel), about (velado con texto) y gestoría (foto de fondo + nombres de clientes).
+- **encaje**: video vertical en pantalla horizontal → centrado con el mismo video borroso detrás; video horizontal en móvil → recorte central.
 
 ## estructura
 
-- `index.html` - página principal con menú
-- `project.html` - página de proyecto individual
-- `data.json` - datos de proyectos
-- `data/projects/` - vídeos en formato webm
+- `index.html` / `styles.css` / `app.js` — la web entera
+- `data.json` — proyectos: `title`, `role`, `studio`, `videoPath`, `start`, `finish` (segundos del bucle por defecto; `null` = hasta el final), `highlight`, `visible`
+- `data/projects/<slug>/video.webm` — los videos
 
 ## uso local
 
@@ -25,14 +23,3 @@ python3 -m http.server 8080
 ```
 
 luego abrir `http://localhost:8080` en el navegador.
-
-## tecnologías
-
-- html5
-- css3
-- javascript vanilla
-- video html5
-
----
-
-*desarrollado con manus*

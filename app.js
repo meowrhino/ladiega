@@ -1,475 +1,434 @@
-// la diega — interfaz estilo videojuego (menu DS + ventanas 9-slice)
+// la diega — carrusel de video a pantalla completa
 
 // Estado global
 let DATA = null;
-let menuEntries = [];      // [{slug, label}] categorias + about
-
-// Niveles de navegacion: 'menu' → 'list' → 'content' → 'modal'
-let level = 'menu';
-let activeCategory = null; // categoria abierta en el panel lateral
-let activeItem = null;     // marca/proyecto abierto en la ventana de contenido
-
-// Elementos
-let handCursor;
-let menuBar, sidePanel, sidePanelTitle, sideList, contentWindow, contentTitle, contentBody;
-let videoModal, modalVideo, modalFrame, modalIframe;
-let volumeBtn, volumeSlider, volumeRange;
+let allProjects = [];   // proyectos visibles con video, en el orden de data.json
+let playlist = [];      // lista que alimenta el carrusel actual
+let index = 0;
+let mode = 'home';      // 'home' | 'category' | 'single' | 'gestoria'
+let auto = true;        // avanzar solo al terminar cada video
+let soundOn = false;    // los navegadores exigen empezar en silencio para el autoplay
+let engaged = false;    // el usuario ha tocado este video → se ignora el bucle start/finish
+let transitioning = false;
+let seeking = false;
 
 const isTouch = window.matchMedia('(pointer: coarse)').matches;
+
+// dos slides que se alternan para el desplazamiento
+let slides = [];        // [{root, video, bg, project}]
+let cur = 0;
+
+// Elementos
+let stage, controls, prevBtn, playBtn, nextBtn, seekBar, autoBtn, soundBtn;
+let menuBtn, brandBtn, ficha, menuOverlay, menuNav, aboutOverlay, aboutBody;
+let gestoriaView, gestoriaPhoto;
 
 async function init() {
     const response = await fetch('data.json');
     DATA = await response.json();
 
-    handCursor = document.getElementById('handCursor');
-    menuBar = document.getElementById('menuBar');
-    sidePanel = document.getElementById('sidePanel');
-    sidePanelTitle = document.getElementById('sidePanelTitle');
-    sideList = document.getElementById('sideList');
-    contentWindow = document.getElementById('contentWindow');
-    contentTitle = document.getElementById('contentTitle');
-    contentBody = document.getElementById('contentBody');
-    videoModal = document.getElementById('videoModal');
-    modalVideo = document.getElementById('modalVideo');
-    modalFrame = document.getElementById('modalFrame');
-    modalIframe = document.getElementById('modalIframe');
-    volumeBtn = document.getElementById('volumeBtn');
-    volumeSlider = document.getElementById('volumeSlider');
-    volumeRange = document.getElementById('volumeRange');
+    DATA.categories.forEach(cat => {
+        (cat.projects || []).forEach(p => {
+            if (p.visible !== false && p.videoPath) {
+                allProjects.push(Object.assign({ category: cat.slug }, p));
+            }
+        });
+    });
 
-    menuEntries = DATA.categories.map(c => ({ slug: c.slug, label: c.label }));
-    menuEntries.push({ slug: 'about', label: DATA.about.title || 'about' });
+    stage = document.getElementById('stage');
+    controls = document.getElementById('controls');
+    prevBtn = document.getElementById('prevBtn');
+    playBtn = document.getElementById('playBtn');
+    nextBtn = document.getElementById('nextBtn');
+    seekBar = document.getElementById('seekBar');
+    autoBtn = document.getElementById('autoBtn');
+    soundBtn = document.getElementById('soundBtn');
+    menuBtn = document.getElementById('menuBtn');
+    brandBtn = document.getElementById('brandBtn');
+    ficha = document.getElementById('ficha');
+    menuOverlay = document.getElementById('menuOverlay');
+    menuNav = document.getElementById('menuNav');
+    aboutOverlay = document.getElementById('aboutOverlay');
+    aboutBody = document.getElementById('aboutBody');
+    gestoriaView = document.getElementById('gestoriaView');
+    gestoriaPhoto = document.getElementById('gestoriaPhoto');
 
-    renderMenuBar();
-    setupEventListeners();
-    const firstMenuItem = menuBar.querySelector('.selected');
-    if (firstMenuItem) firstMenuItem.focus({ preventScroll: true });
-    placeHand(firstMenuItem);
+    if (DATA.gestoria && DATA.gestoria.photo) gestoriaPhoto.src = DATA.gestoria.photo;
+
+    setupSlides();
+    buildMenu();
+    buildAbout();
+    bindUI();
+    goHome(true);
 }
 
-/* ===== Volumen y SFX ===== */
+/* ===== Slides ===== */
 
-function getUiVolume() {
-    return volumeRange.value / 100;
+function setupSlides() {
+    slides = Array.from(document.querySelectorAll('.slide')).map(root => {
+        const s = {
+            root,
+            video: root.querySelector('.main-video'),
+            bg: root.querySelector('.bg-video'),
+            project: null
+        };
+        s.video.addEventListener('loadedmetadata', () => {
+            if (s.project && (s.project.start || 0) > 0) s.video.currentTime = s.project.start;
+            fitSlide(s);
+        });
+        s.video.addEventListener('timeupdate', () => onTimeUpdate(s));
+        s.video.addEventListener('ended', () => onEnded(s));
+        s.video.addEventListener('play', () => {
+            updatePlayBtn();
+            if (s.root.classList.contains('contain')) s.bg.play().catch(() => {});
+        });
+        s.video.addEventListener('pause', () => {
+            updatePlayBtn();
+            s.bg.pause();
+        });
+        return s;
+    });
 }
 
-let audioCtx = null;
-
-function playSfx(type) {
-    const vol = getUiVolume();
-    if (vol <= 0) return; // muteado → sin SFX
-    try {
-        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const def = {
-            move:   { f0: 620, f1: 620,  dur: 0.045 },
-            select: { f0: 740, f1: 1180, dur: 0.09 },
-            back:   { f0: 520, f1: 260,  dur: 0.08 }
-        }[type];
-        if (!def) return;
-        const t = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(def.f0, t);
-        osc.frequency.linearRampToValueAtTime(def.f1, t + def.dur);
-        gain.gain.setValueAtTime(0.1 * vol, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + def.dur);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(t);
-        osc.stop(t + def.dur + 0.02);
-    } catch (e) { /* sin audio, no pasa nada */ }
+function curSlide() {
+    return slides[cur];
 }
 
-/* ===== Cursor manita ===== */
+// intenta reproducir; si el navegador lo bloquea o el video aun carga, reintenta
+function tryPlay(s) {
+    s.video.play().catch(() => {
+        const retry = () => { if (s === curSlide()) s.video.play().catch(() => {}); };
+        s.video.addEventListener('canplay', retry, { once: true });
+    });
+}
 
-// ultimo elemento apuntado: la manita se queda donde paso el cursor por ultima vez
-let handEl = null;
+// video vertical en pantalla horizontal → contain + mismo video borroso detras;
+// en cualquier otro caso (p. ej. horizontal en movil) → cover, corte central
+function fitSlide(s) {
+    const v = s.video;
+    if (!v.videoWidth || !s.project) return;
+    const needsBg = v.videoHeight > v.videoWidth && window.innerWidth > window.innerHeight;
+    s.root.classList.toggle('contain', needsBg);
+    if (needsBg) {
+        if (s.bg.getAttribute('src') !== s.project.videoPath) s.bg.src = s.project.videoPath;
+        if (!v.paused) s.bg.play().catch(() => {});
+    } else {
+        s.bg.pause();
+    }
+}
 
-function placeHand(el) {
-    if (isTouch || !el || el.offsetParent === null && el.getBoundingClientRect().width === 0) {
-        handCursor.classList.add('hidden');
-        handEl = null;
+function onTimeUpdate(s) {
+    if (s !== curSlide()) return;
+    const v = s.video;
+    const p = s.project;
+    // mantener el fondo borroso en sincronia sin provocar saltos
+    if (s.root.classList.contains('contain') && s.bg.readyState >= 1 &&
+        Math.abs(s.bg.currentTime - v.currentTime) > 0.35) {
+        s.bg.currentTime = v.currentTime;
+    }
+    if (!seeking && v.duration) {
+        seekBar.value = Math.round((v.currentTime / v.duration) * 1000);
+    }
+    // bucle por defecto start→finish mientras nadie toca el video
+    if (!engaged && p && p.finish && v.currentTime >= p.finish) {
+        if (auto && mode !== 'single' && playlist.length > 1) next();
+        else v.currentTime = p.start || 0;
+    }
+}
+
+function onEnded(s) {
+    if (s !== curSlide()) return;
+    if (auto && mode !== 'single' && playlist.length > 1) {
+        next();
         return;
     }
-    handEl = el;
-    const rect = el.getBoundingClientRect();
-    handCursor.classList.remove('hidden');
-    handCursor.style.left = (rect.left - 38) + 'px';
-    handCursor.style.top = (rect.top + rect.height / 2 - 9) + 'px';
+    s.video.currentTime = (!engaged && s.project && s.project.start) || 0;
+    s.video.play().catch(() => {});
 }
 
-function getSelectedElement() {
-    const container = {
-        menu: menuBar,
-        list: sideList,
-        content: contentBody,
-        modal: null
-    }[level];
-    if (!container) return null;
-    return container.querySelector('.selected');
+/* ===== Transicion del carrusel ===== */
+
+function showVideo(project, dir = 1, instant = false) {
+    const incoming = slides[1 - cur];
+    const outgoing = slides[cur];
+    transitioning = true;
+    engaged = false;
+
+    incoming.project = project;
+    incoming.root.classList.remove('contain');
+    incoming.bg.removeAttribute('src');
+    incoming.bg.load();
+    incoming.video.src = project.videoPath;
+    incoming.video.muted = !soundOn;
+    incoming.video.load();
+
+    const begin = () => {
+        // colocar el entrante fuera de pantalla sin animar
+        incoming.root.classList.add('notransition');
+        incoming.root.classList.remove('offleft', 'offright');
+        incoming.root.classList.add(dir >= 0 ? 'offright' : 'offleft');
+        void incoming.root.offsetWidth; // forzar reflow
+        if (!instant) incoming.root.classList.remove('notransition');
+        else outgoing.root.classList.add('notransition');
+        // desplazamiento: el entrante entra y el saliente se va hacia el otro lado
+        incoming.root.classList.remove('offright', 'offleft');
+        outgoing.root.classList.remove('offleft', 'offright');
+        outgoing.root.classList.add(dir >= 0 ? 'offleft' : 'offright');
+        cur = slides.indexOf(incoming);
+        tryPlay(incoming);
+        seekBar.value = 0;
+        updateFicha();
+        updatePlayBtn();
+        setTimeout(() => {
+            outgoing.video.pause();
+            outgoing.root.classList.remove('notransition');
+            incoming.root.classList.remove('notransition');
+            transitioning = false;
+        }, instant ? 30 : 700);
+    };
+
+    // esperar a que el video tenga imagen para que el desplazamiento no muestre negro
+    if (instant || incoming.video.readyState >= 2) {
+        begin();
+    } else {
+        let started = false;
+        const go = () => { if (!started) { started = true; begin(); } };
+        incoming.video.addEventListener('loadeddata', go, { once: true });
+        setTimeout(go, 1400);
+    }
 }
 
-function refreshHand() {
-    // esperar a que acabe la animacion de apertura de ventana
-    setTimeout(() => placeHand(getSelectedElement()), 170);
+function next() {
+    if (transitioning || playlist.length < 2) return;
+    index = (index + 1) % playlist.length; // al llegar al final vuelve al principio
+    showVideo(playlist[index], 1);
 }
 
-/* ===== Seleccion generica ===== */
-
-// marca .selected dentro de un contenedor y mueve foco + manita
-function setSelection(container, index, { silent = false, focus = true } = {}) {
-    const items = Array.from(container.querySelectorAll('[data-nav]'));
-    if (items.length === 0) return;
-    const clamped = Math.max(0, Math.min(index, items.length - 1));
-    const prev = container.querySelector('.selected');
-    const next = items[clamped];
-    if (prev === next) { placeHand(next); return; }
-    if (prev) prev.classList.remove('selected');
-    next.classList.add('selected');
-    if (focus) next.focus({ preventScroll: false });
-    placeHand(next);
-    if (!silent) playSfx('move');
+function prev() {
+    if (transitioning || playlist.length < 2) return;
+    index = (index - 1 + playlist.length) % playlist.length;
+    showVideo(playlist[index], -1);
 }
 
-function selectedIndex(container) {
-    const items = Array.from(container.querySelectorAll('[data-nav]'));
-    return Math.max(0, items.findIndex(el => el.classList.contains('selected')));
+/* ===== Vistas ===== */
+
+function goHome(instant = false) {
+    exitGestoria();
+    mode = 'home';
+    const highlights = allProjects.filter(p => p.highlight);
+    playlist = highlights.length ? highlights : allProjects.slice();
+    index = 0;
+    updateModeUI();
+    closeOverlays();
+    showVideo(playlist[index], 1, instant);
 }
 
-/* ===== Barra de menu ===== */
-
-function renderMenuBar() {
-    menuBar.innerHTML = '';
-    menuEntries.forEach((entry, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'menu-item';
-        btn.textContent = entry.label;
-        btn.dataset.nav = i;
-        if (i === 0) btn.classList.add('selected');
-        btn.addEventListener('click', () => {
-            setSelection(menuBar, i, { silent: true });
-            toggleCategory(entry.slug);
-        });
-        // la manita sigue siempre al cursor, aunque haya una ventana abierta
-        btn.addEventListener('mouseenter', () => setSelection(menuBar, i, { focus: false }));
-        menuBar.appendChild(btn);
-    });
+function goCategory(slug) {
+    const list = allProjects.filter(p => p.category === slug);
+    if (!list.length) return;
+    exitGestoria();
+    mode = 'category';
+    playlist = list;
+    index = 0;
+    updateModeUI();
+    closeOverlays();
+    showVideo(playlist[index], 1);
 }
 
-function toggleCategory(slug) {
-    const openSlug = activeCategory ? activeCategory.slug : (contentWindow.classList.contains('hidden') ? null : 'about');
-    if (openSlug === slug) {
-        // volver a cerrar
-        closeAll();
-        playSfx('back');
+function goProject(project) {
+    exitGestoria();
+    mode = 'single';
+    playlist = [project];
+    index = 0;
+    updateModeUI();
+    closeOverlays();
+    showVideo(project, 1);
+}
+
+function goGestoria() {
+    mode = 'gestoria';
+    slides.forEach(s => { s.video.pause(); s.bg.pause(); });
+    gestoriaView.classList.remove('hidden');
+    updateModeUI();
+    updateFicha();
+    closeOverlays();
+}
+
+function exitGestoria() {
+    gestoriaView.classList.add('hidden');
+}
+
+function updateModeUI() {
+    controls.classList.toggle('mode-single', mode === 'single');
+    controls.classList.toggle('gone', mode === 'gestoria');
+}
+
+/* ===== Ficha tecnica ===== */
+
+function updateFicha() {
+    ficha.innerHTML = '';
+    const addLine = (cls, text) => {
+        const span = document.createElement('span');
+        span.className = cls;
+        span.textContent = text;
+        ficha.appendChild(span);
+    };
+    if (mode === 'gestoria') {
+        ((DATA.gestoria && DATA.gestoria.clients) || []).forEach(name => addLine('ficha-title', name));
         return;
     }
-    closeAll({ silent: true });
-    playSfx('select');
-    menuBar.querySelectorAll('.menu-item').forEach((el, i) => {
-        el.classList.toggle('open', menuEntries[i].slug === slug);
+    const p = playlist[index];
+    if (!p) return;
+    addLine('ficha-title', p.title);
+    if (p.role) addLine('ficha-line', p.role);
+    if (p.studio) addLine('ficha-line', p.studio);
+}
+
+/* ===== Menu y about ===== */
+
+function buildMenu() {
+    menuNav.innerHTML = '';
+    const mkBtn = (cls, text, fn) => {
+        const b = document.createElement('button');
+        b.className = cls;
+        b.textContent = text;
+        b.addEventListener('click', fn);
+        return b;
+    };
+
+    menuNav.appendChild(mkBtn('menu-link', 'home', () => goHome()));
+
+    DATA.categories.forEach(cat => {
+        const list = allProjects.filter(p => p.category === cat.slug);
+        if (!list.length) return;
+        const group = document.createElement('div');
+        group.className = 'menu-group';
+        group.appendChild(mkBtn('menu-cat', cat.label, () => goCategory(cat.slug)));
+        list.forEach(p => group.appendChild(mkBtn('menu-proj', p.title, () => goProject(p))));
+        menuNav.appendChild(group);
     });
-    if (slug === 'about') {
-        openAbout();
-    } else {
-        openCategory(slug);
+
+    menuNav.appendChild(mkBtn('menu-link', (DATA.about && DATA.about.title) || 'about', openAbout));
+    if (DATA.gestoria) {
+        menuNav.appendChild(mkBtn('menu-link', DATA.gestoria.label || 'gestoría', goGestoria));
     }
 }
 
-function closeAll({ silent = true } = {}) {
-    sidePanel.classList.add('hidden');
-    contentWindow.classList.add('hidden');
-    stopModal();
-    videoModal.classList.add('hidden');
-    activeCategory = null;
-    activeItem = null;
-    level = 'menu';
-    menuBar.querySelectorAll('.menu-item').forEach(el => el.classList.remove('open'));
-    const sel = menuBar.querySelector('.selected');
-    if (sel) sel.focus({ preventScroll: true });
-    placeHand(sel);
-    if (!silent) playSfx('back');
-}
-
-/* ===== Panel lateral ===== */
-
-function openCategory(slug) {
-    activeCategory = DATA.categories.find(c => c.slug === slug);
-    if (!activeCategory) return;
-    sidePanelTitle.textContent = activeCategory.label;
-    sideList.innerHTML = '';
-    const items = activeCategory.items.filter(item => item.visible);
-    items.forEach((item, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'side-item';
-        btn.textContent = item.name;
-        btn.dataset.nav = i;
-        if (i === 0) btn.classList.add('selected');
-        btn.addEventListener('click', () => {
-            setSelection(sideList, i, { silent: true });
-            openItem(item);
-        });
-        btn.addEventListener('mouseenter', () => setSelection(sideList, i, { focus: false }));
-        sideList.appendChild(btn);
+function buildAbout() {
+    aboutBody.innerHTML = '';
+    (((DATA.about) && DATA.about.text) || []).forEach(line => {
+        const p = document.createElement('p');
+        p.textContent = line;
+        aboutBody.appendChild(p);
     });
-    sidePanel.classList.remove('hidden');
-    level = 'list';
-    const first = sideList.querySelector('.selected');
-    if (first) first.focus({ preventScroll: true });
-    refreshHand();
 }
 
-function closeSidePanel() {
-    contentWindow.classList.add('hidden');
-    sidePanel.classList.add('hidden');
-    activeCategory = null;
-    activeItem = null;
-    closeAll({ silent: true });
-    playSfx('back');
-}
-
-/* ===== Ventana de contenido ===== */
-
-function openItem(item) {
-    activeItem = item;
-    playSfx('select');
-    contentTitle.textContent = item.name;
-    contentBody.innerHTML = '';
-
-    const projects = item.projects.filter(p => p.visible);
-    if (projects.length === 0) {
-        const msg = document.createElement('p');
-        msg.className = 'empty-msg';
-        msg.textContent = 'coming soon…';
-        contentBody.appendChild(msg);
-    }
-
-    projects.forEach((project, i) => {
-        const card = document.createElement('button');
-        card.className = 'card';
-        card.dataset.nav = i;
-        if (i === 0) card.classList.add('selected');
-
-        const thumb = document.createElement('span');
-        thumb.className = 'card-thumb';
-        if (project.videoPath) {
-            const vid = document.createElement('video');
-            vid.src = project.videoPath;
-            vid.preload = 'metadata';
-            vid.muted = true;
-            vid.playsInline = true;
-            thumb.appendChild(vid);
-        } else if (project.embedUrl) {
-            // enlace externo sin video: miniatura con el nombre de la plataforma
-            const label = document.createElement('span');
-            label.className = 'thumb-embed-label';
-            label.textContent = project.embedUrl.includes('spotify') ? 'spotify'
-                : (project.embedUrl.includes('youtu') ? 'youtube' : 'link');
-            thumb.appendChild(label);
-        }
-        const overlay = document.createElement('span');
-        overlay.className = 'play-overlay';
-        thumb.appendChild(overlay);
-
-        const info = document.createElement('span');
-        info.className = 'card-info';
-        const title = document.createElement('span');
-        title.className = 'card-title';
-        title.textContent = project.title;
-        info.appendChild(title);
-        if (project.job) {
-            const job = document.createElement('span');
-            job.className = 'card-line';
-            job.textContent = 'Job: ' + project.job;
-            info.appendChild(job);
-        }
-        if (project.studio) {
-            const studio = document.createElement('span');
-            studio.className = 'card-line';
-            studio.textContent = 'Studio: ' + project.studio;
-            info.appendChild(studio);
-        }
-
-        card.appendChild(thumb);
-        card.appendChild(info);
-        card.addEventListener('click', () => {
-            setSelection(contentBody, i, { silent: true });
-            openModal(project);
-        });
-        card.addEventListener('mouseenter', () => setSelection(contentBody, i, { focus: false }));
-        contentBody.appendChild(card);
-    });
-
-    contentWindow.classList.remove('hidden');
-    level = 'content';
-    const first = contentBody.querySelector('.selected');
-    if (first) first.focus({ preventScroll: true });
-    refreshHand();
-}
-
-function closeContent() {
-    contentWindow.classList.add('hidden');
-    activeItem = null;
-    playSfx('back');
-    if (activeCategory) {
-        level = 'list';
-        const sel = sideList.querySelector('.selected');
-        if (sel) sel.focus({ preventScroll: true });
-        placeHand(sel);
-    } else {
-        closeAll({ silent: true });
-    }
+function openMenu() {
+    menuOverlay.classList.remove('hidden');
 }
 
 function openAbout() {
-    activeItem = null;
-    contentTitle.textContent = DATA.about.title || 'about';
-    contentBody.innerHTML = '';
-    (DATA.about.text || []).forEach(line => {
-        const p = document.createElement('p');
-        p.className = 'about-text';
-        p.textContent = line;
-        contentBody.appendChild(p);
-    });
-    contentWindow.classList.remove('hidden');
-    level = 'content';
-    playSfx('select');
-    document.getElementById('contentClose').focus({ preventScroll: true });
-    placeHand(null);
+    menuOverlay.classList.add('hidden');
+    aboutOverlay.classList.remove('hidden');
 }
 
-/* ===== Modal de video / embed ===== */
-
-// convierte enlaces normales de youtube/spotify en su version embed
-function toEmbedUrl(url) {
-    let m = url.match(/youtu\.be\/([\w-]+)/) || url.match(/youtube\.com\/watch\?.*v=([\w-]+)/);
-    if (m) return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1';
-    m = url.match(/open\.spotify\.com\/(?:intl-\w+\/)?(track|album|playlist|artist|episode|show)\/(\w+)/);
-    if (m) return 'https://open.spotify.com/embed/' + m[1] + '/' + m[2];
-    return url;
+function closeOverlays() {
+    menuOverlay.classList.add('hidden');
+    aboutOverlay.classList.add('hidden');
 }
 
-function openModal(project) {
-    playSfx('select');
-    modalFrame.classList.remove('embed-video', 'embed-spotify');
-    if (project.embedUrl) {
-        // enlace externo (spotify / youtube) dentro del mismo marco
-        const url = toEmbedUrl(project.embedUrl);
-        modalFrame.classList.add(url.includes('spotify') ? 'embed-spotify' : 'embed-video');
-        modalIframe.src = url;
-        modalIframe.classList.remove('hidden');
-        modalVideo.classList.add('hidden');
-    } else {
-        modalVideo.src = project.videoPath;
-        modalVideo.muted = false;
-        modalVideo.volume = 1;
-        modalVideo.classList.remove('hidden');
-        modalIframe.classList.add('hidden');
-    }
-    videoModal.classList.remove('hidden');
-    if (!project.embedUrl) modalVideo.play();
-    level = 'modal';
-    document.getElementById('modalClose').focus({ preventScroll: true });
-    placeHand(null);
+/* ===== Controles ===== */
+
+function updatePlayBtn() {
+    playBtn.textContent = curSlide().video.paused ? 'play' : 'pause';
 }
 
-function stopModal() {
-    modalVideo.pause();
-    modalVideo.removeAttribute('src');
-    modalVideo.load();
-    modalIframe.removeAttribute('src');
-}
+let hideTimer = null;
 
-function closeModal() {
-    stopModal();
-    videoModal.classList.add('hidden');
-    playSfx('back');
-    level = 'content';
-    const sel = contentBody.querySelector('.selected');
-    if (sel) sel.focus({ preventScroll: true });
-    placeHand(sel);
-}
-
-/* ===== Teclado ===== */
-
-function handleKeydown(e) {
-    const tag = document.activeElement ? document.activeElement.tagName : '';
-    if (tag === 'INPUT') return; // slider de volumen
-
-    const back = e.key === 'Escape' || e.key === 'Backspace';
-
-    if (level === 'modal') {
-        if (back) { e.preventDefault(); closeModal(); }
-        return;
-    }
-
-    if (back) {
-        e.preventDefault();
-        if (level === 'content') closeContent();
-        else if (level === 'list') closeSidePanel();
-        return;
-    }
-
-    if (level === 'menu') {
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-            e.preventDefault();
-            const delta = e.key === 'ArrowRight' ? 1 : -1;
-            setSelection(menuBar, selectedIndex(menuBar) + delta);
-        }
-    } else if (level === 'list') {
-        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            e.preventDefault();
-            const delta = e.key === 'ArrowDown' ? 1 : -1;
-            setSelection(sideList, selectedIndex(sideList) + delta);
-        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-            // cambiar de categoria sin volver al menu, estilo L/R de la DS
-            e.preventDefault();
-            const delta = e.key === 'ArrowRight' ? 1 : -1;
-            const next = (selectedIndex(menuBar) + delta + menuEntries.length) % menuEntries.length;
-            setSelection(menuBar, next, { silent: true, focus: false });
-            toggleCategory(menuEntries[next].slug);
-        }
-    } else if (level === 'content') {
-        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            e.preventDefault();
-            const delta = e.key === 'ArrowDown' ? 1 : -1;
-            setSelection(contentBody, selectedIndex(contentBody) + delta);
-        }
+function revealControls() {
+    if (mode === 'gestoria') return;
+    controls.classList.remove('faded');
+    if (!isTouch) {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => controls.classList.add('faded'), 2800);
     }
 }
 
 /* ===== Listeners ===== */
 
-function setupEventListeners() {
-    document.getElementById('sidePanelClose').addEventListener('click', closeSidePanel);
-    document.getElementById('contentClose').addEventListener('click', closeContent);
-    document.getElementById('modalClose').addEventListener('click', closeModal);
+function bindUI() {
+    // las tres esquinas abren el menu
+    menuBtn.addEventListener('click', openMenu);
+    brandBtn.addEventListener('click', openMenu);
+    ficha.addEventListener('click', openMenu);
 
-    videoModal.addEventListener('click', (e) => {
-        if (e.target === videoModal) closeModal();
+    prevBtn.addEventListener('click', prev);
+    nextBtn.addEventListener('click', next);
+
+    playBtn.addEventListener('click', () => {
+        engaged = true;
+        const v = curSlide().video;
+        if (v.paused) v.play().catch(() => {});
+        else v.pause();
     });
 
-    document.addEventListener('keydown', handleKeydown);
-
-    // Volumen (afecta a los SFX; el modal de video va aparte)
-    volumeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        volumeSlider.classList.toggle('hidden');
-    });
-    document.addEventListener('click', (e) => {
-        if (!volumeSlider.classList.contains('hidden') &&
-            !volumeSlider.contains(e.target) &&
-            !volumeBtn.contains(e.target)) {
-            volumeSlider.classList.add('hidden');
-        }
+    autoBtn.addEventListener('click', () => {
+        auto = !auto;
+        autoBtn.classList.toggle('on', auto);
     });
 
-    // la manita sigue al ultimo elemento apuntado aunque cambie el layout
-    window.addEventListener('resize', () => placeHand(handEl || getSelectedElement()));
-    sideList.addEventListener('scroll', () => placeHand(handEl || getSelectedElement()));
-    contentBody.addEventListener('scroll', () => placeHand(handEl || getSelectedElement()));
+    soundBtn.addEventListener('click', () => {
+        soundOn = !soundOn;
+        slides.forEach(s => { s.video.muted = !soundOn; });
+        soundBtn.classList.toggle('on', soundOn);
+    });
+
+    seekBar.addEventListener('input', () => {
+        seeking = true;
+        engaged = true;
+        const v = curSlide().video;
+        if (v.duration) v.currentTime = (seekBar.value / 1000) * v.duration;
+    });
+    seekBar.addEventListener('change', () => { seeking = false; });
+
+    // la telita: hover en escritorio, toque en movil
+    if (isTouch) {
+        stage.addEventListener('click', () => controls.classList.toggle('faded'));
+    } else {
+        window.addEventListener('pointermove', revealControls);
+    }
+
+    // cerrar overlays tocando el fondo
+    menuOverlay.addEventListener('click', e => { if (e.target === menuOverlay) closeOverlays(); });
+    aboutOverlay.addEventListener('click', e => { if (e.target === aboutOverlay) closeOverlays(); });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { closeOverlays(); return; }
+        const tag = document.activeElement ? document.activeElement.tagName : '';
+        if (tag === 'INPUT' || tag === 'BUTTON') return;
+        const overlayOpen = !menuOverlay.classList.contains('hidden') ||
+            !aboutOverlay.classList.contains('hidden');
+        if (overlayOpen || mode === 'gestoria') return;
+        if (e.key === ' ') { e.preventDefault(); playBtn.click(); }
+        else if (e.key === 'ArrowRight') next();
+        else if (e.key === 'ArrowLeft') prev();
+        else if (e.key.toLowerCase() === 'm') soundBtn.click();
+    });
+
+    window.addEventListener('resize', () => slides.forEach(fitSlide));
+
+    // si el navegador bloqueo el autoplay inicial, la primera interaccion lo arranca
+    const resume = () => {
+        const v = curSlide().video;
+        if (v.paused && !engaged && mode !== 'gestoria') v.play().catch(() => {});
+    };
+    document.addEventListener('pointerdown', resume, { once: true });
+    document.addEventListener('keydown', resume, { once: true });
+
+    // el navegador pausa los videos al ocultar la pestaña: reanudar al volver
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') resume();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', init);

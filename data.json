@@ -1,173 +1,143 @@
 {
+  "_ayuda": {
+    "start / finish": "segundos del bucle que se ve por defecto cuando nadie toca el video; finish null = hasta el final",
+    "highlight": "true = aparece en el carrusel de la home",
+    "visible": "false = no aparece en ningun sitio (para dejar proyectos preparados)",
+    "role / studio": "salen en la ficha tecnica de abajo a la izquierda"
+  },
   "categories": [
     {
       "slug": "music",
       "label": "music",
-      "items": [
+      "projects": [
+        {
+          "slug": "menudas-piezas",
+          "title": "MENUDAS PIEZAS TRAILER",
+          "role": "Original Soundtrack",
+          "studio": "",
+          "videoPath": "data/projects/menudasPiezas/video.webm",
+          "start": 0,
+          "finish": null,
+          "highlight": true,
+          "visible": true
+        },
         {
           "slug": "samantha",
-          "name": "Samantha",
+          "title": "SAMANTHA",
+          "role": "",
+          "studio": "",
+          "videoPath": "",
+          "start": 0,
+          "finish": null,
+          "highlight": false,
           "visible": false,
-          "projects": [
-            {
-              "title": "SAMANTHA",
-              "job": "",
-              "studio": "",
-              "embedUrl": "PEGA_AQUI_EL_ENLACE_DE_SPOTIFY_O_YOUTUBE",
-              "visible": true
-            }
-          ]
+          "_nota": "añade el video en data/projects/samantha/video.webm, pon videoPath y visible true"
         },
         {
           "slug": "amor-butano",
-          "name": "Amor Butano",
+          "title": "AMOR BUTANO",
+          "role": "",
+          "studio": "",
+          "videoPath": "",
+          "start": 0,
+          "finish": null,
+          "highlight": false,
           "visible": false,
-          "projects": [
-            {
-              "title": "AMOR BUTANO",
-              "job": "",
-              "studio": "",
-              "embedUrl": "PEGA_AQUI_EL_ENLACE_DE_SPOTIFY_O_YOUTUBE",
-              "visible": true
-            }
-          ]
-        },
-        {
-          "slug": "menudas-piezas",
-          "name": "Menudas Piezas",
-          "visible": true,
-          "projects": [
-            {
-              "title": "MENUDAS PIEZAS TRAILER",
-              "job": "Original Soundtrack",
-              "studio": "",
-              "videoPath": "data/projects/menudasPiezas/video.webm",
-              "visible": true
-            }
-          ]
+          "_nota": "añade el video en data/projects/amorButano/video.webm, pon videoPath y visible true"
         }
       ]
     },
     {
       "slug": "brands",
       "label": "brands",
-      "items": [
+      "projects": [
         {
-          "slug": "purple",
-          "name": "Purple",
-          "visible": true,
-          "projects": [
-            {
-              "title": "PURPLE 1",
-              "job": "Music & SFX",
-              "studio": "Misato Kindness",
-              "videoPath": "data/projects/purple1/video.webm",
-              "visible": true
-            },
-            {
-              "title": "PURPLE 2",
-              "job": "Music & SFX",
-              "studio": "Misato Kindness",
-              "videoPath": "data/projects/purple2/video.webm",
-              "visible": true
-            }
-          ]
+          "slug": "purple-1",
+          "title": "PURPLE 1",
+          "role": "Music & SFX",
+          "studio": "Misato Kindness",
+          "videoPath": "data/projects/purple1/video.webm",
+          "start": 0,
+          "finish": null,
+          "highlight": true,
+          "visible": true
+        },
+        {
+          "slug": "purple-2",
+          "title": "PURPLE 2",
+          "role": "Music & SFX",
+          "studio": "Misato Kindness",
+          "videoPath": "data/projects/purple2/video.webm",
+          "start": 0,
+          "finish": null,
+          "highlight": false,
+          "visible": true
         },
         {
           "slug": "pull-and-bear",
-          "name": "Pull&Bear Primavera Sound",
-          "visible": true,
-          "projects": [
-            {
-              "title": "PULL&BEAR PRIMAVERA SOUND",
-              "job": "Music & Sound Design",
-              "studio": "",
-              "videoPath": "data/projects/pullAndBear/video.webm",
-              "visible": true
-            }
-          ]
+          "title": "PULL&BEAR PRIMAVERA SOUND",
+          "role": "Music & Sound Design",
+          "studio": "",
+          "videoPath": "data/projects/pullAndBear/video.webm",
+          "start": 0,
+          "finish": null,
+          "highlight": true,
+          "visible": true
         },
         {
           "slug": "massimo-dutti",
-          "name": "Massimo Dutti",
-          "visible": true,
-          "projects": [
-            {
-              "title": "MASSIMO DUTTI JEANS X JEANS",
-              "job": "Music & Sound Design",
-              "studio": "",
-              "videoPath": "data/projects/massimoDutti/video.webm",
-              "visible": true
-            }
-          ]
+          "title": "MASSIMO DUTTI JEANS X JEANS",
+          "role": "Music & Sound Design",
+          "studio": "",
+          "videoPath": "data/projects/massimoDutti/video.webm",
+          "start": 0,
+          "finish": null,
+          "highlight": true,
+          "visible": true
         },
         {
           "slug": "nike",
-          "name": "Nike",
-          "visible": true,
-          "projects": [
-            {
-              "title": "NIKE",
-              "job": "Sound Design",
-              "studio": "",
-              "videoPath": "data/projects/nike/video.webm",
-              "visible": true
-            }
-          ]
-        },
-        {
-          "slug": "oysho",
-          "name": "Oysho",
-          "visible": true,
-          "projects": []
-        },
-        {
-          "slug": "loewe",
-          "name": "Loewe",
-          "visible": true,
-          "projects": []
+          "title": "NIKE",
+          "role": "Sound Design",
+          "studio": "",
+          "videoPath": "data/projects/nike/video.webm",
+          "start": 0,
+          "finish": null,
+          "highlight": true,
+          "visible": true
         },
         {
           "slug": "adolfo-dominguez",
-          "name": "Adolfo Domínguez",
-          "visible": true,
-          "projects": [
-            {
-              "title": "ADOLFO DOMÍNGUEZ SS23",
-              "job": "Music",
-              "studio": "",
-              "videoPath": "data/projects/adolfoDominguez/video.webm",
-              "visible": true
-            }
-          ]
+          "title": "ADOLFO DOMÍNGUEZ SS23",
+          "role": "Music",
+          "studio": "",
+          "videoPath": "data/projects/adolfoDominguez/video.webm",
+          "start": 0,
+          "finish": null,
+          "highlight": true,
+          "visible": true
         },
         {
           "slug": "pacsun",
-          "name": "Pacsun",
-          "visible": true,
-          "projects": [
-            {
-              "title": "PACSUN",
-              "job": "Music",
-              "studio": "",
-              "videoPath": "data/projects/pacsun/video.webm",
-              "visible": true
-            }
-          ]
+          "title": "PACSUN",
+          "role": "Music",
+          "studio": "",
+          "videoPath": "data/projects/pacsun/video.webm",
+          "start": 0,
+          "finish": null,
+          "highlight": true,
+          "visible": true
         },
         {
           "slug": "timberland",
-          "name": "Timberland",
-          "visible": true,
-          "projects": [
-            {
-              "title": "TIMBERLAND",
-              "job": "Music",
-              "studio": "",
-              "videoPath": "data/projects/timberland/video.webm",
-              "visible": true
-            }
-          ]
+          "title": "TIMBERLAND",
+          "role": "Music",
+          "studio": "",
+          "videoPath": "data/projects/timberland/video.webm",
+          "start": 0,
+          "finish": null,
+          "highlight": true,
+          "visible": true
         }
       ]
     }
@@ -179,5 +149,11 @@
       "music, sound design & sfx",
       "(edita este texto en data.json → about)"
     ]
+  },
+  "gestoria": {
+    "label": "gestoría",
+    "photo": "data/logo_original.png",
+    "_nota": "cambia photo por la ruta de una foto de la diega",
+    "clients": ["Gemma", "Manu", "Laura"]
   }
 }
