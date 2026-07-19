@@ -7,7 +7,7 @@ let playlist = [];      // lista que alimenta el carrusel actual
 let index = 0;
 let mode = 'home';      // 'home' | 'category' | 'single' | 'gestoria'
 let auto = true;        // avanzar solo al terminar cada video
-let soundOn = false;    // los navegadores exigen empezar en silencio para el autoplay
+let soundOn = true;     // sonido encendido por defecto (si el navegador lo bloquea, arranca al primer gesto)
 let engaged = false;    // el usuario ha tocado este video → se ignora el bucle start/finish
 let transitioning = false;
 let seeking = false;
@@ -19,9 +19,9 @@ let slides = [];        // [{root, video, bg, project}]
 let cur = 0;
 
 // Elementos
-let stage, controls, prevBtn, playBtn, nextBtn, seekBar, autoBtn, soundBtn;
+let stage, controls, playBtn, seekBar, autoBtn, soundBtn;
 let menuBtn, brandBtn, ficha, menuOverlay, menuNav, aboutOverlay, aboutBody;
-let gestoriaView, gestoriaPhoto;
+let gestoriaView, gestoriaPhoto, bigTitle, wipe;
 
 async function init() {
     const response = await fetch('data.json');
@@ -37,10 +37,10 @@ async function init() {
 
     stage = document.getElementById('stage');
     controls = document.getElementById('controls');
-    prevBtn = document.getElementById('prevBtn');
     playBtn = document.getElementById('playBtn');
-    nextBtn = document.getElementById('nextBtn');
     seekBar = document.getElementById('seekBar');
+    bigTitle = document.getElementById('bigTitle');
+    wipe = document.getElementById('wipe');
     autoBtn = document.getElementById('autoBtn');
     soundBtn = document.getElementById('soundBtn');
     menuBtn = document.getElementById('menuBtn');
@@ -94,12 +94,47 @@ function curSlide() {
     return slides[cur];
 }
 
-// intenta reproducir; si el navegador lo bloquea o el video aun carga, reintenta
+// intenta reproducir; si el navegador bloquea el autoplay con sonido,
+// arranca en silencio y el primer gesto del usuario lo activa
 function tryPlay(s) {
+    s.video.muted = !soundOn;
     s.video.play().catch(() => {
-        const retry = () => { if (s === curSlide()) s.video.play().catch(() => {}); };
-        s.video.addEventListener('canplay', retry, { once: true });
+        s.video.muted = true;
+        s.video.play().catch(() => {
+            const retry = () => { if (s === curSlide()) s.video.play().catch(() => {}); };
+            s.video.addEventListener('canplay', retry, { once: true });
+        });
     });
+}
+
+/* ===== SFX (recuperados del diseño anterior, ligados al toggle sound) ===== */
+
+let audioCtx = null;
+
+function playSfx(type) {
+    if (!soundOn) return;
+    try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const def = {
+            move:   { f0: 620, f1: 620,  dur: 0.045 },
+            select: { f0: 740, f1: 1180, dur: 0.09 },
+            back:   { f0: 520, f1: 260,  dur: 0.08 }
+        }[type];
+        if (!def) return;
+        const t = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(def.f0, t);
+        osc.frequency.linearRampToValueAtTime(def.f1, t + def.dur);
+        gain.gain.setValueAtTime(0.06, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + def.dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + def.dur + 0.02);
+    } catch (e) { /* sin audio, no pasa nada */ }
 }
 
 // video vertical en pantalla horizontal → contain + mismo video borroso detras;
@@ -179,6 +214,11 @@ function showVideo(project, dir = 1, instant = false) {
         seekBar.value = 0;
         updateFicha();
         updatePlayBtn();
+        // micro-glitch y titulo gigante de entrada
+        stage.classList.remove('glitch');
+        void stage.offsetWidth;
+        stage.classList.add('glitch');
+        showBigTitle(project.title);
         setTimeout(() => {
             outgoing.video.pause();
             outgoing.root.classList.remove('notransition');
@@ -210,9 +250,41 @@ function prev() {
     showVideo(playlist[index], -1);
 }
 
+/* ===== Titulo gigante ===== */
+
+let bigTitleTimerA = null;
+let bigTitleTimerB = null;
+
+function showBigTitle(text) {
+    clearTimeout(bigTitleTimerA);
+    clearTimeout(bigTitleTimerB);
+    bigTitle.textContent = text;
+    bigTitle.classList.remove('to-corner');
+    bigTitle.classList.add('hidden');
+    void bigTitle.offsetWidth;
+    bigTitle.classList.remove('hidden');
+    document.body.classList.add('title-flight');
+    bigTitleTimerA = setTimeout(() => bigTitle.classList.add('to-corner'), 1000);
+    bigTitleTimerB = setTimeout(() => {
+        bigTitle.classList.add('hidden');
+        bigTitle.classList.remove('to-corner');
+        document.body.classList.remove('title-flight');
+    }, 1500);
+}
+
+/* ===== Barrido diagonal ===== */
+
+function playWipe() {
+    wipe.classList.remove('run');
+    void wipe.offsetWidth;
+    wipe.classList.add('run');
+    setTimeout(() => wipe.classList.remove('run'), 750);
+}
+
 /* ===== Vistas ===== */
 
 function goHome(instant = false) {
+    if (!instant) playWipe();
     exitGestoria();
     mode = 'home';
     const highlights = allProjects.filter(p => p.highlight);
@@ -226,6 +298,7 @@ function goHome(instant = false) {
 function goCategory(slug) {
     const list = allProjects.filter(p => p.category === slug);
     if (!list.length) return;
+    playWipe();
     exitGestoria();
     mode = 'category';
     playlist = list;
@@ -236,6 +309,7 @@ function goCategory(slug) {
 }
 
 function goProject(project) {
+    playWipe();
     exitGestoria();
     mode = 'single';
     playlist = [project];
@@ -246,6 +320,7 @@ function goProject(project) {
 }
 
 function goGestoria() {
+    playWipe();
     mode = 'gestoria';
     slides.forEach(s => { s.video.pause(); s.bg.pause(); });
     gestoriaView.classList.remove('hidden');
@@ -261,6 +336,7 @@ function exitGestoria() {
 function updateModeUI() {
     controls.classList.toggle('mode-single', mode === 'single');
     controls.classList.toggle('gone', mode === 'gestoria');
+    document.body.dataset.mode = mode;
 }
 
 /* ===== Ficha tecnica ===== */
@@ -286,55 +362,155 @@ function updateFicha() {
 
 /* ===== Menu y about ===== */
 
+// iconos pixel dibujados a mano (heredan el color del texto)
+const MENU_ICONS = {
+    home: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v1h1v1h1v1h1v1h1v1h1v1h1v2h-2v6h-4v-4H7v4H3V9H1V7h1V6h1V5h1V4h1V3h1V2h1z"/></svg>',
+    music: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v1h2v1h2v2h1v3h-2V6h-2V5H9v6h-1v2H7v1H4v-1H3v-2h1v-1h3z"/></svg>',
+    brands: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v3h1v1h1v1h4v2h-1v1h-1v1h-1v4h-2v-1H9v-1H7v1H6v1H4V9H3V8H2V7H1V5h4V4h1V3h1z"/></svg>',
+    about: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 0h2v4h1v1h1v1h4v2h-4v1h-1v1h-1v4H7v-4H6v-1H5V8H1V6h4V5h1V4h1z"/></svg>',
+    gestoria: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M6 2h4v2h4v3H9V6H7v1H2V4h4zM2 8h5v1h2V8h5v6H2z"/></svg>'
+};
+
 function buildMenu() {
     menuNav.innerHTML = '';
-    const mkBtn = (cls, text, fn) => {
+    const mkBtn = (cls, text, fn, icon) => {
         const b = document.createElement('button');
         b.className = cls;
-        b.textContent = text;
-        b.addEventListener('click', fn);
+        if (icon) {
+            const i = document.createElement('span');
+            i.className = 'icon';
+            i.innerHTML = icon;
+            b.appendChild(i);
+        }
+        const label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = text;
+        b.appendChild(label);
+        if (cls.indexOf('menu-cat') !== -1) {
+            // marquesina que aparece al pasar por encima
+            const mq = document.createElement('span');
+            mq.className = 'marquee';
+            const half = (text + ' · ').repeat(4);
+            mq.textContent = half + half;
+            b.appendChild(mq);
+        }
+        b.addEventListener('click', () => { playSfx('select'); fn(); });
+        b.addEventListener('mouseenter', () => playSfx('move'));
         return b;
     };
 
-    menuNav.appendChild(mkBtn('menu-link', 'home', () => goHome()));
+    menuNav.appendChild(mkBtn('menu-item menu-link', 'home', () => goHome(), MENU_ICONS.home));
 
     DATA.categories.forEach(cat => {
         const list = allProjects.filter(p => p.category === cat.slug);
         if (!list.length) return;
         const group = document.createElement('div');
         group.className = 'menu-group';
-        group.appendChild(mkBtn('menu-cat', cat.label, () => goCategory(cat.slug)));
-        list.forEach(p => group.appendChild(mkBtn('menu-proj', p.title, () => goProject(p))));
+        group.appendChild(mkBtn('menu-cat', cat.label, () => goCategory(cat.slug), MENU_ICONS[cat.slug]));
+        list.forEach(p => group.appendChild(mkBtn('menu-item menu-proj', p.title, () => goProject(p))));
         menuNav.appendChild(group);
     });
 
-    menuNav.appendChild(mkBtn('menu-link', (DATA.about && DATA.about.title) || 'about', openAbout));
+    menuNav.appendChild(mkBtn('menu-item menu-link', (DATA.about && DATA.about.title) || 'about', openAbout, MENU_ICONS.about));
     if (DATA.gestoria) {
-        menuNav.appendChild(mkBtn('menu-link', DATA.gestoria.label || 'gestoría', goGestoria));
+        menuNav.appendChild(mkBtn('menu-item menu-link', DATA.gestoria.label || 'gestoría', goGestoria, MENU_ICONS.gestoria));
     }
 }
 
+// about como ficha de personaje: retrato, clase y stats con barritas
 function buildAbout() {
     aboutBody.innerHTML = '';
-    (((DATA.about) && DATA.about.text) || []).forEach(line => {
+    const about = DATA.about || {};
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+
+    if (about.photo) {
+        const img = document.createElement('img');
+        img.className = 'stat-photo';
+        img.src = about.photo;
+        img.alt = about.name || 'la diega';
+        card.appendChild(img);
+    }
+
+    const name = document.createElement('div');
+    name.className = 'stat-name';
+    name.textContent = about.name || 'la diega';
+    card.appendChild(name);
+
+    if (about.clase) {
+        const cls = document.createElement('div');
+        cls.className = 'stat-class';
+        cls.textContent = about.clase;
+        card.appendChild(cls);
+    }
+
+    if (about.stats && about.stats.length) {
+        const rows = document.createElement('div');
+        rows.className = 'stat-rows';
+        about.stats.forEach((st, i) => {
+            const row = document.createElement('div');
+            row.className = 'stat-row';
+            const label = document.createElement('span');
+            label.className = 'stat-label';
+            label.textContent = st.label;
+            row.appendChild(label);
+            const bar = document.createElement('span');
+            bar.className = 'stat-bar';
+            for (let c = 0; c < 10; c++) {
+                const cell = document.createElement('span');
+                cell.className = 'stat-cell' + (c < st.value ? ' filled' : '');
+                if (c < st.value) cell.style.animationDelay = (i * 90 + c * 40) + 'ms';
+                bar.appendChild(cell);
+            }
+            row.appendChild(bar);
+            rows.appendChild(row);
+        });
+        card.appendChild(rows);
+    }
+
+    (about.text || []).forEach(line => {
         const p = document.createElement('p');
         p.textContent = line;
-        aboutBody.appendChild(p);
+        card.appendChild(p);
     });
+
+    aboutBody.appendChild(card);
 }
 
 function openMenu() {
     menuOverlay.classList.remove('hidden');
+    document.body.classList.add('overlay-open');
+    playSfx('select');
+    // relanzar la entrada escalonada de los items
+    Array.from(menuNav.children).forEach((el, i) => {
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = '';
+        el.style.animationDelay = (i * 45) + 'ms';
+    });
+    // seleccion inicial estilo consola
+    const first = menuNav.querySelector('.menu-item');
+    if (first) first.focus({ preventScroll: true });
 }
 
 function openAbout() {
     menuOverlay.classList.add('hidden');
     aboutOverlay.classList.remove('hidden');
+    document.body.classList.add('overlay-open');
+    // relanzar la animacion de las barritas
+    aboutOverlay.querySelectorAll('.stat-cell.filled').forEach(c => {
+        const d = c.style.animationDelay;
+        c.style.animation = 'none';
+        void c.offsetWidth;
+        c.style.animation = '';
+        c.style.animationDelay = d;
+    });
 }
 
 function closeOverlays() {
     menuOverlay.classList.add('hidden');
     aboutOverlay.classList.add('hidden');
+    document.body.classList.remove('overlay-open');
 }
 
 /* ===== Controles ===== */
@@ -362,8 +538,27 @@ function bindUI() {
     brandBtn.addEventListener('click', openMenu);
     ficha.addEventListener('click', openMenu);
 
-    prevBtn.addEventListener('click', prev);
-    nextBtn.addEventListener('click', next);
+    // cerrar ventanas
+    document.getElementById('menuClose').addEventListener('click', () => { playSfx('back'); closeOverlays(); });
+    document.getElementById('aboutClose').addEventListener('click', () => { playSfx('back'); closeOverlays(); });
+
+    // flechas laterales del carrusel
+    document.getElementById('arrowPrev').addEventListener('click', () => { playSfx('move'); prev(); });
+    document.getElementById('arrowNext').addEventListener('click', () => { playSfx('move'); next(); });
+
+    // parallax de la ventana del menu siguiendo el raton
+    if (!isTouch) {
+        const menuWin = menuOverlay.querySelector('.game-window');
+        menuOverlay.addEventListener('mousemove', e => {
+            const r = menuWin.getBoundingClientRect();
+            const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
+            const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+            menuWin.style.transform =
+                'perspective(900px) rotateX(' + (-dy * 4).toFixed(2) + 'deg)' +
+                ' rotateY(' + (dx * 4).toFixed(2) + 'deg)';
+        });
+        menuOverlay.addEventListener('mouseleave', () => { menuWin.style.transform = ''; });
+    }
 
     playBtn.addEventListener('click', () => {
         engaged = true;
@@ -417,9 +612,10 @@ function bindUI() {
 
     window.addEventListener('resize', () => slides.forEach(fitSlide));
 
-    // si el navegador bloqueo el autoplay inicial, la primera interaccion lo arranca
+    // si el navegador bloqueo el autoplay inicial (o el sonido), la primera interaccion lo arranca
     const resume = () => {
         const v = curSlide().video;
+        if (soundOn) v.muted = false;
         if (v.paused && !engaged && mode !== 'gestoria') v.play().catch(() => {});
     };
     document.addEventListener('pointerdown', resume, { once: true });

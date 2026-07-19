@@ -6,6 +6,9 @@
     <title>la diega</title>
     <meta name="description" content="la diega — music, sound design & sfx">
     <link rel="icon" type="image/png" href="data/navicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -34,24 +37,46 @@
     <button id="brandBtn" class="ui" aria-label="abrir menú">la diega</button>
     <button id="ficha" class="ui ficha" aria-label="abrir menú"></button>
 
-    <!-- Navegacion del video -->
-    <div id="controls" class="controls faded">
-        <button id="prevBtn" aria-label="video anterior">prev</button>
-        <button id="playBtn">pause</button>
-        <button id="nextBtn" aria-label="video siguiente">next</button>
+    <!-- Flechas de carrusel -->
+    <button id="arrowPrev" class="edge-arrow left" aria-label="video anterior">◀</button>
+    <button id="arrowNext" class="edge-arrow right" aria-label="video siguiente">▶</button>
+
+    <!-- Titulo gigante al cambiar de video -->
+    <div id="bigTitle" class="big-title hidden" aria-hidden="true"></div>
+
+    <!-- Barrido diagonal al navegar desde el menu -->
+    <div id="wipe" class="wipe" aria-hidden="true"></div>
+
+    <!-- Navegacion del video: barra arriba, botones abajo -->
+    <div id="controls" class="controls window faded">
         <input id="seekBar" type="range" min="0" max="1000" value="0" aria-label="progreso">
-        <button id="autoBtn" class="toggle on" aria-label="avance automático">auto</button>
-        <button id="soundBtn" class="toggle" aria-label="sonido">sound</button>
+        <div class="controls-row">
+            <button id="autoBtn" class="toggle on" aria-label="avance automático">auto</button>
+            <button id="playBtn" class="play-big">pause</button>
+            <button id="soundBtn" class="toggle on" aria-label="sonido">sound</button>
+        </div>
     </div>
 
     <!-- Menu -->
     <div id="menuOverlay" class="overlay hidden">
-        <nav id="menuNav" class="menu-nav" aria-label="menú principal"></nav>
+        <div class="game-window menu-window window">
+            <div class="window-header">
+                <span>menú</span>
+                <button id="menuClose" class="close-btn" aria-label="cerrar">×</button>
+            </div>
+            <nav id="menuNav" class="menu-nav" aria-label="menú principal"></nav>
+        </div>
     </div>
 
     <!-- About -->
     <div id="aboutOverlay" class="overlay hidden">
-        <div id="aboutBody" class="about-body"></div>
+        <div class="game-window about-window window">
+            <div class="window-header">
+                <span id="aboutTitle">about</span>
+                <button id="aboutClose" class="close-btn" aria-label="cerrar">×</button>
+            </div>
+            <div id="aboutBody" class="about-body"></div>
+        </div>
     </div>
 
     <script src="app.js"></script>
