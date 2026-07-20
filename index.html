@@ -37,10 +37,6 @@
     <button id="brandBtn" class="ui" aria-label="abrir menú">la diega</button>
     <button id="ficha" class="ui ficha" aria-label="abrir menú"></button>
 
-    <!-- Flechas de carrusel -->
-    <button id="arrowPrev" class="edge-arrow left" aria-label="video anterior">◀</button>
-    <button id="arrowNext" class="edge-arrow right" aria-label="video siguiente">▶</button>
-
     <!-- Titulo gigante al cambiar de video -->
     <div id="bigTitle" class="big-title hidden" aria-hidden="true"></div>
 
@@ -53,17 +49,14 @@
         <input id="seekBar" class="ctrl" type="range" min="0" max="1000" value="0" aria-label="progreso">
         <button id="autoBtn" class="ctrl toggle on" aria-label="avance automático">auto</button>
         <button id="soundBtn" class="ctrl toggle on" aria-label="sonido">sound</button>
+        <button id="arrowPrev" class="ctrl edge-arrow left" aria-label="video anterior">◀</button>
+        <button id="arrowNext" class="ctrl edge-arrow right" aria-label="video siguiente">▶</button>
     </div>
 
-    <!-- Menu -->
-    <div id="menuOverlay" class="overlay hidden">
-        <div class="game-window menu-window window">
-            <div class="window-header">
-                <span>menú</span>
-                <button id="menuClose" class="close-btn" aria-label="cerrar">×</button>
-            </div>
-            <nav id="menuNav" class="menu-nav" aria-label="menú principal"></nav>
-        </div>
+    <!-- Menu: pantalla completa sobre el video difuminado -->
+    <div id="menuOverlay" class="overlay menu-overlay hidden">
+        <button id="menuClose" class="overlay-close" aria-label="cerrar">×</button>
+        <nav id="menuNav" class="menu-nav" aria-label="menú principal"></nav>
     </div>
 
     <!-- About -->

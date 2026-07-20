@@ -35,7 +35,14 @@ button {
     color: inherit;
     font: inherit;
     letter-spacing: inherit;
-    cursor: pointer;
+}
+
+/* la manita como cursor en toda la web */
+html,
+body,
+button,
+input[type="range"] {
+    cursor: url('data/icons/hand-cursor.svg') 7 0, auto;
 }
 
 /* ===== Ventanas 9-slice (recuperadas del diseño anterior) ===== */
@@ -216,7 +223,7 @@ body.overlay-open .gestoria {
 }
 
 .ficha {
-    bottom: 44px;
+    bottom: 18px;
     left: 22px;
     display: flex;
     flex-direction: column;
@@ -224,7 +231,12 @@ body.overlay-open .gestoria {
     gap: 2px;
     text-align: left;
     transform: rotate(-1.4deg);
-    transition: transform 0.2s ease, opacity 0.25s ease 0.2s;
+    transition: transform 0.2s ease, bottom 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.25s ease 0.2s;
+}
+
+/* cuando aparece la barra de vida, la ficha sube para dejarle sitio */
+body.controls-open .ficha {
+    bottom: 48px;
 }
 
 .ficha:hover {
@@ -235,11 +247,36 @@ body.overlay-open .gestoria {
     color: var(--highlight);
 }
 
+/* contador de nivel: por que video del carrusel vas */
+.ficha-level {
+    font-size: 15px;
+    background: var(--highlight);
+    color: #000;
+    padding: 0 8px 2px;
+    transform: rotate(2deg);
+    clip-path: polygon(3% 10%, 100% 0, 97% 92%, 0 100%);
+    text-shadow: none;
+}
+
 /* cada linea con su propio torcimiento suave */
 .ficha-title {
     font-size: 26px;
     line-height: 1.1;
     transform: rotate(-1deg);
+    max-width: min(46vw, 340px);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* titulo largo: marquesina dentro de su linea */
+.ficha-title .ficha-scroll {
+    display: inline-block;
+    animation: fichaScroll 7s linear infinite;
+}
+
+@keyframes fichaScroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
 }
 
 .ficha-line {
@@ -253,51 +290,48 @@ body.overlay-open .gestoria {
     transform: rotate(-0.7deg);
 }
 
-/* ===== Flechas de carrusel ===== */
+/* ===== Flechas de carrusel (salen y se esconden con el resto de controles) ===== */
 .edge-arrow {
-    position: fixed;
     top: 50%;
-    transform: translateY(-50%);
-    z-index: 42;
     font-family: var(--font-plain);
     font-size: 30px;
     color: #fff;
-    opacity: 0.75;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
     padding: 14px 10px;
 }
 
 .edge-arrow.left {
+    --base: translateY(-50%) rotate(-4deg);
     left: 12px;
 }
 
 .edge-arrow.right {
+    --base: translateY(-50%) rotate(4deg);
     right: 12px;
 }
 
 .edge-arrow:hover,
 .edge-arrow:focus-visible {
     color: var(--highlight);
-    opacity: 1;
     outline: none;
 }
 
-.edge-arrow.left:hover {
+.controls:not(.faded) .edge-arrow.left:hover {
     animation: nudgeLeft 0.55s ease-in-out infinite;
 }
 
-.edge-arrow.right:hover {
+.controls:not(.faded) .edge-arrow.right:hover {
     animation: nudgeRight 0.55s ease-in-out infinite;
 }
 
 @keyframes nudgeLeft {
-    0%, 100% { transform: translate(0, -50%); }
-    50% { transform: translate(-5px, -50%); }
+    0%, 100% { transform: var(--base); }
+    50% { transform: var(--base) translateX(-5px); }
 }
 
 @keyframes nudgeRight {
-    0%, 100% { transform: translate(0, -50%); }
-    50% { transform: translate(5px, -50%); }
+    0%, 100% { transform: var(--base); }
+    50% { transform: var(--base) translateX(5px); }
 }
 
 /* sin carrusel no hay flechas */
@@ -332,19 +366,21 @@ body[data-mode="gestoria"] .edge-arrow {
 /* cada elemento entra desde un sitio aleatorio y se marcha hacia otro distinto:
    las coordenadas (--ix/--iy/--ir, --ox/--oy/--or) las sortea el JS en cada pasada */
 body.booted .controls:not(.faded) .ctrl {
-    animation: ctrlIn 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+    animation: flyIn 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
 }
 
 body.booted .controls.faded .ctrl {
-    animation: ctrlOut 0.38s cubic-bezier(0.5, -0.25, 0.75, 0.4) both;
+    animation: flyOut 0.38s cubic-bezier(0.5, -0.25, 0.75, 0.4) both;
 }
 
 .controls #playBtn { animation-delay: 0ms; }
 .controls #seekBar { animation-delay: 70ms; }
 .controls #autoBtn { animation-delay: 130ms; }
 .controls #soundBtn { animation-delay: 185ms; }
+.controls #arrowPrev { animation-delay: 40ms; }
+.controls #arrowNext { animation-delay: 100ms; }
 
-@keyframes ctrlIn {
+@keyframes flyIn {
     from {
         opacity: 0;
         transform: var(--base, none)
@@ -353,7 +389,7 @@ body.booted .controls.faded .ctrl {
     }
 }
 
-@keyframes ctrlOut {
+@keyframes flyOut {
     to {
         opacity: 0;
         transform: var(--base, none)
@@ -446,6 +482,7 @@ body.title-flight .play-big {
     display: none;
 }
 
+/* barra de vida: celditas que se van llenando (--p la pone el JS) */
 #seekBar {
     --base: translateX(-50%) rotate(-0.6deg);
     left: 50%;
@@ -453,28 +490,34 @@ body.title-flight .play-big {
     width: min(600px, 88vw);
     -webkit-appearance: none;
     appearance: none;
-    height: 5px;
-    background: rgba(216, 219, 255, 0.35);
+    height: 14px;
+    background:
+        repeating-linear-gradient(90deg,
+            transparent 0 15px,
+            rgba(4, 4, 16, 0.9) 15px 18px),
+        linear-gradient(90deg,
+            var(--highlight) 0 var(--p, 0%),
+            rgba(216, 219, 255, 0.18) var(--p, 0%) 100%);
+    box-shadow: 0 0 0 2px rgba(4, 4, 16, 0.75);
     outline: none;
-    cursor: pointer;
 }
 
 #seekBar::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 12px;
+    width: 8px;
     height: 22px;
-    background: var(--highlight);
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(4, 4, 16, 0.9);
 }
 
 #seekBar::-moz-range-thumb {
-    width: 12px;
+    width: 8px;
     height: 22px;
     border-radius: 0;
-    background: var(--highlight);
+    background: #fff;
     border: none;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 2px rgba(4, 4, 16, 0.9);
 }
 
 /* ===== Titulo gigante al cambiar de video ===== */
@@ -599,7 +642,9 @@ body.title-flight .ficha {
     position: fixed;
     inset: 0;
     z-index: 60;
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(5, 5, 18, 0.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    backdrop-filter: blur(14px) saturate(1.15);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -610,12 +655,53 @@ body.title-flight .ficha {
     display: none;
 }
 
+/* al cerrarse: los items vuelan y el fondo se destapa */
+.overlay.closing {
+    pointer-events: none;
+    animation: overlayOut 0.35s ease 0.15s forwards;
+}
+
+@keyframes overlayOut {
+    to { opacity: 0; }
+}
+
+.overlay-close {
+    position: absolute;
+    top: 14px;
+    right: 24px;
+    z-index: 2;
+    font-size: 46px;
+    line-height: 1;
+    padding: 2px 10px;
+    color: var(--text);
+    text-shadow: 3px 3px 0 #000;
+    transition: transform 0.15s ease;
+}
+
+.overlay-close:hover,
+.overlay-close:focus-visible {
+    color: var(--highlight);
+    transform: rotate(-8deg) scale(1.2);
+    outline: none;
+}
+
 .game-window {
     display: flex;
     flex-direction: column;
     width: min(560px, 94vw);
     max-height: min(760px, 88vh);
     color: var(--text-window);
+}
+
+.overlay.closing .game-window {
+    animation: windowOut 0.3s ease forwards;
+}
+
+@keyframes windowOut {
+    to {
+        opacity: 0;
+        transform: scale(0.9) rotate(-2deg) translateY(30px);
+    }
 }
 
 .menu-nav,
@@ -630,36 +716,44 @@ body.title-flight .ficha {
     display: none;
 }
 
+/* menu a pantalla completa, sin ventana: los items flotan sobre el video */
 .menu-nav {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 24px;
     text-align: center;
+    max-height: 100%;
+    padding: 40px 24px 60px;
+    transition: transform 0.12s ease-out;
 }
 
 .menu-group {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
 }
 
-/* entrada escalonada de los items */
-.menu-nav > * {
-    opacity: 0;
-    animation: itemIn 0.28s cubic-bezier(0.2, 0.7, 0.3, 1.2) forwards;
+/* cada grupo con su ladeo propio */
+.menu-group:nth-child(even) {
+    transform: rotate(0.8deg);
 }
 
-@keyframes itemIn {
-    from {
-        opacity: 0;
-        transform: translateX(-42px) rotate(-3deg);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0) rotate(0);
-    }
+.menu-group:nth-child(odd) {
+    transform: rotate(-0.8deg);
+}
+
+/* los botones del menu entran desde sitios aleatorios y se marchan hacia otros,
+   igual que los controles del video (vars sorteadas en JS al abrir/cerrar) */
+.menu-overlay button {
+    animation: flyIn 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+.menu-overlay.closing button {
+    animation-name: flyOut;
+    animation-duration: 0.32s;
+    animation-timing-function: cubic-bezier(0.5, -0.25, 0.75, 0.4);
 }
 
 /* etiqueta de categoria: pegatina torcida */
@@ -716,9 +810,10 @@ body.title-flight .ficha {
 /* items del menu con splash amarillo y manita */
 .menu-item {
     position: relative;
-    font-size: 32px;
+    font-size: 38px;
     line-height: 1.1;
     padding: 3px 20px;
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.85);
     transition: transform 0.1s ease-out;
 }
 
@@ -756,12 +851,12 @@ body.title-flight .ficha {
 .menu-item::after {
     content: '';
     position: absolute;
-    left: -22px;
+    left: -26px;
     top: 50%;
-    width: 26px;
-    height: 26px;
-    margin-top: -13px;
-    background: url('data/icons/hand.svg') no-repeat center / contain;
+    width: 28px;
+    height: 28px;
+    margin-top: -14px;
+    background: url('data/icons/hand-point.svg') no-repeat center / contain;
     filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, 0.6));
     display: none;
     animation: handBob 0.55s ease-in-out infinite;
@@ -775,6 +870,7 @@ body.title-flight .ficha {
 .menu-item:hover,
 .menu-item:focus {
     color: #000;
+    text-shadow: none;
     transform: rotate(-1.5deg) scale(1.07);
     outline: none;
 }
@@ -787,12 +883,7 @@ body.title-flight .ficha {
 }
 
 .menu-link {
-    font-size: 26px;
-}
-
-/* la ventana del menu se inclina con el raton (parallax) */
-.menu-window {
-    transition: transform 0.12s ease-out;
+    font-size: 28px;
 }
 
 /* ===== About: ficha de personaje ===== */
@@ -893,7 +984,11 @@ body.title-flight .ficha {
     }
 
     .ficha {
-        bottom: calc(44px + env(safe-area-inset-bottom));
+        bottom: calc(18px + env(safe-area-inset-bottom));
+    }
+
+    body.controls-open .ficha {
+        bottom: calc(48px + env(safe-area-inset-bottom));
     }
 
     #autoBtn {
@@ -923,6 +1018,6 @@ body.title-flight .ficha {
     }
 
     .menu-item {
-        font-size: 27px;
+        font-size: 32px;
     }
 }

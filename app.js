@@ -163,10 +163,11 @@ function onTimeUpdate(s) {
     }
     if (!seeking && v.duration) {
         seekBar.value = Math.round((v.currentTime / v.duration) * 1000);
+        seekBar.style.setProperty('--p', (seekBar.value / 10) + '%');
     }
     // bucle por defecto start→finish mientras nadie toca el video
     if (!engaged && p && p.finish && v.currentTime >= p.finish) {
-        if (auto && mode !== 'single' && playlist.length > 1) next();
+        if (auto && mode !== 'single' && playlist.length > 1) next(true);
         else v.currentTime = p.start || 0;
     }
 }
@@ -174,7 +175,7 @@ function onTimeUpdate(s) {
 function onEnded(s) {
     if (s !== curSlide()) return;
     if (auto && mode !== 'single' && playlist.length > 1) {
-        next();
+        next(true);
         return;
     }
     s.video.currentTime = (!engaged && s.project && s.project.start) || 0;
@@ -212,6 +213,7 @@ function showVideo(project, dir = 1, instant = false) {
         cur = slides.indexOf(incoming);
         tryPlay(incoming);
         seekBar.value = 0;
+        seekBar.style.setProperty('--p', '0%');
         updateFicha();
         updatePlayBtn();
         // micro-glitch y titulo gigante de entrada
@@ -238,10 +240,21 @@ function showVideo(project, dir = 1, instant = false) {
     }
 }
 
-function next() {
+// en el avance automatico, 1 de cada 4 veces el cambio va con barrido diagonal;
+// con las flechas siempre desplazamiento lateral (la direccion es feedback)
+function next(fromAuto) {
     if (transitioning || playlist.length < 2) return;
     index = (index + 1) % playlist.length; // al llegar al final vuelve al principio
-    showVideo(playlist[index], 1);
+    if (fromAuto && Math.random() < 0.25) {
+        transitioning = true;
+        playWipe();
+        setTimeout(() => {
+            transitioning = false;
+            showVideo(playlist[index], 1, true);
+        }, 250);
+    } else {
+        showVideo(playlist[index], 1);
+    }
 }
 
 function prev() {
@@ -339,6 +352,7 @@ function goProject(project) {
 
 function goGestoria() {
     playWipe();
+    hideControls();
     mode = 'gestoria';
     slides.forEach(s => { s.video.pause(); s.bg.pause(); });
     gestoriaView.classList.remove('hidden');
@@ -366,6 +380,7 @@ function updateFicha() {
         span.className = cls;
         span.textContent = text;
         ficha.appendChild(span);
+        return span;
     };
     if (mode === 'gestoria') {
         ((DATA.gestoria && DATA.gestoria.clients) || []).forEach(name => addLine('ficha-title', name));
@@ -373,9 +388,21 @@ function updateFicha() {
     }
     const p = playlist[index];
     if (!p) return;
-    addLine('ficha-title', p.title);
+    // contador de nivel: por que video del carrusel vas
+    if (mode !== 'single' && playlist.length > 1) {
+        addLine('ficha-level', (index + 1) + '/' + playlist.length);
+    }
+    const t = addLine('ficha-title', p.title);
     if (p.role) addLine('ficha-line', p.role);
     if (p.studio) addLine('ficha-line', p.studio);
+    // titulo mas ancho que su hueco → marquesina dentro de la linea
+    if (t.scrollWidth > t.clientWidth + 1) {
+        const inner = document.createElement('span');
+        inner.className = 'ficha-scroll';
+        inner.textContent = p.title + ' · ' + p.title + ' · ';
+        t.textContent = '';
+        t.appendChild(inner);
+    }
 }
 
 /* ===== Menu y about ===== */
@@ -496,15 +523,18 @@ function buildAbout() {
 }
 
 function openMenu() {
-    menuOverlay.classList.remove('hidden');
+    clearTimeout(menuOverlay._hideTimer);
+    menuOverlay.classList.remove('hidden', 'closing');
+    aboutOverlay.classList.add('hidden');
     document.body.classList.add('overlay-open');
     playSfx('select');
-    // relanzar la entrada escalonada de los items
-    Array.from(menuNav.children).forEach((el, i) => {
-        el.style.animation = 'none';
-        void el.offsetWidth;
-        el.style.animation = '';
-        el.style.animationDelay = (i * 45) + 'ms';
+    // cada boton entra desde un sitio aleatorio distinto
+    menuOverlay.querySelectorAll('button').forEach((b, i) => {
+        scatterVars(b, 'i');
+        b.style.animation = 'none';
+        void b.offsetWidth;
+        b.style.animation = '';
+        b.style.animationDelay = (i * 30) + 'ms';
     });
     // seleccion inicial estilo consola
     const first = menuNav.querySelector('.menu-item');
@@ -512,8 +542,9 @@ function openMenu() {
 }
 
 function openAbout() {
+    clearTimeout(aboutOverlay._hideTimer);
     menuOverlay.classList.add('hidden');
-    aboutOverlay.classList.remove('hidden');
+    aboutOverlay.classList.remove('hidden', 'closing');
     document.body.classList.add('overlay-open');
     // relanzar la animacion de las barritas
     aboutOverlay.querySelectorAll('.stat-cell.filled').forEach(c => {
@@ -525,9 +556,30 @@ function openAbout() {
     });
 }
 
-function closeOverlays() {
-    menuOverlay.classList.add('hidden');
-    aboutOverlay.classList.add('hidden');
+// cierre animado: los botones del menu vuelan hacia sitios aleatorios y el fondo se destapa;
+// sin animar (navegacion con wipe) se esconde al instante
+function hideOverlay(ov, animated) {
+    if (ov.classList.contains('hidden') || ov.classList.contains('closing')) return;
+    if (!animated) {
+        ov.classList.add('hidden');
+        return;
+    }
+    if (ov === menuOverlay) {
+        menuOverlay.querySelectorAll('button').forEach((b, i) => {
+            scatterVars(b, 'o');
+            b.style.animationDelay = (i * 18) + 'ms';
+        });
+    }
+    ov.classList.add('closing');
+    ov._hideTimer = setTimeout(() => {
+        ov.classList.add('hidden');
+        ov.classList.remove('closing');
+    }, 520);
+}
+
+function closeOverlays(animated) {
+    hideOverlay(menuOverlay, animated);
+    hideOverlay(aboutOverlay, animated);
     document.body.classList.remove('overlay-open');
 }
 
@@ -554,6 +606,7 @@ function showControls() {
     if (controls.classList.contains('faded')) {
         controls.querySelectorAll('.ctrl').forEach(el => scatterVars(el, 'i'));
         controls.classList.remove('faded');
+        document.body.classList.add('controls-open');
     }
     if (!isTouch) {
         clearTimeout(hideTimer);
@@ -565,6 +618,12 @@ function hideControls() {
     if (controls.classList.contains('faded')) return;
     controls.querySelectorAll('.ctrl').forEach(el => scatterVars(el, 'o'));
     controls.classList.add('faded');
+    document.body.classList.remove('controls-open');
+}
+
+// vibracion cortita en movil al cambiar de video
+function buzz() {
+    if (navigator.vibrate) navigator.vibrate(12);
 }
 
 /* ===== Listeners ===== */
@@ -576,25 +635,24 @@ function bindUI() {
     ficha.addEventListener('click', openMenu);
 
     // cerrar ventanas
-    document.getElementById('menuClose').addEventListener('click', () => { playSfx('back'); closeOverlays(); });
-    document.getElementById('aboutClose').addEventListener('click', () => { playSfx('back'); closeOverlays(); });
+    document.getElementById('menuClose').addEventListener('click', () => { playSfx('back'); closeOverlays(true); });
+    document.getElementById('aboutClose').addEventListener('click', () => { playSfx('back'); closeOverlays(true); });
 
     // flechas laterales del carrusel
-    document.getElementById('arrowPrev').addEventListener('click', () => { playSfx('move'); prev(); });
-    document.getElementById('arrowNext').addEventListener('click', () => { playSfx('move'); next(); });
+    document.getElementById('arrowPrev').addEventListener('click', () => { playSfx('move'); buzz(); prev(); });
+    document.getElementById('arrowNext').addEventListener('click', () => { playSfx('move'); buzz(); next(); });
 
-    // parallax de la ventana del menu siguiendo el raton
+    // parallax del menu siguiendo el raton
     if (!isTouch) {
-        const menuWin = menuOverlay.querySelector('.game-window');
         menuOverlay.addEventListener('mousemove', e => {
-            const r = menuWin.getBoundingClientRect();
+            const r = menuNav.getBoundingClientRect();
             const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
             const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
-            menuWin.style.transform =
-                'perspective(900px) rotateX(' + (-dy * 4).toFixed(2) + 'deg)' +
-                ' rotateY(' + (dx * 4).toFixed(2) + 'deg)';
+            menuNav.style.transform =
+                'perspective(900px) rotateX(' + (-dy * 3).toFixed(2) + 'deg)' +
+                ' rotateY(' + (dx * 3).toFixed(2) + 'deg)';
         });
-        menuOverlay.addEventListener('mouseleave', () => { menuWin.style.transform = ''; });
+        menuOverlay.addEventListener('mouseleave', () => { menuNav.style.transform = ''; });
     }
 
     playBtn.addEventListener('click', () => {
@@ -626,10 +684,15 @@ function bindUI() {
     });
     seekBar.addEventListener('change', () => { seeking = false; });
 
-    // la telita: hover en escritorio, toque en movil
+    // la telita: hover en escritorio; en movil, tap-zones laterales para navegar
+    // y el centro enseña/esconde los controles
     if (isTouch) {
-        stage.addEventListener('click', () => {
-            if (controls.classList.contains('faded')) showControls();
+        stage.addEventListener('click', e => {
+            const w = window.innerWidth;
+            const canNav = mode !== 'single' && playlist.length > 1;
+            if (canNav && e.clientX < w * 0.3) { playSfx('move'); buzz(); prev(); }
+            else if (canNav && e.clientX > w * 0.7) { playSfx('move'); buzz(); next(); }
+            else if (controls.classList.contains('faded')) showControls();
             else hideControls();
         });
     } else {
@@ -637,11 +700,13 @@ function bindUI() {
     }
 
     // cerrar overlays tocando el fondo
-    menuOverlay.addEventListener('click', e => { if (e.target === menuOverlay) closeOverlays(); });
-    aboutOverlay.addEventListener('click', e => { if (e.target === aboutOverlay) closeOverlays(); });
+    menuOverlay.addEventListener('click', e => {
+        if (e.target === menuOverlay || e.target === menuNav) closeOverlays(true);
+    });
+    aboutOverlay.addEventListener('click', e => { if (e.target === aboutOverlay) closeOverlays(true); });
 
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') { closeOverlays(); return; }
+        if (e.key === 'Escape') { closeOverlays(true); return; }
         const tag = document.activeElement ? document.activeElement.tagName : '';
         if (tag === 'INPUT' || tag === 'BUTTON') return;
         const overlayOpen = !menuOverlay.classList.contains('hidden') ||
