@@ -388,9 +388,30 @@ function updateFicha() {
     }
     const p = playlist[index];
     if (!p) return;
-    // contador de nivel: por que video del carrusel vas
+    // contador de nivel: por que video del carrusel vas;
+    // al pasar por encima asoman flechitas para navegar
     if (mode !== 'single' && playlist.length > 1) {
-        addLine('ficha-level', (index + 1) + '/' + playlist.length);
+        const row = document.createElement('span');
+        row.className = 'ficha-level-row';
+        const mkArrow = (cls, label, fn) => {
+            const a = document.createElement('span');
+            a.className = 'level-arrow ' + cls;
+            a.setAttribute('role', 'button');
+            a.setAttribute('aria-label', label);
+            a.addEventListener('click', e => {
+                e.stopPropagation();
+                playSfx('move');
+                fn();
+            });
+            return a;
+        };
+        row.appendChild(mkArrow('prev', 'video anterior', prev));
+        const chip = document.createElement('span');
+        chip.className = 'ficha-level';
+        chip.textContent = (index + 1) + '/' + playlist.length;
+        row.appendChild(chip);
+        row.appendChild(mkArrow('next', 'video siguiente', () => next()));
+        ficha.appendChild(row);
     }
     const t = addLine('ficha-title', p.title);
     if (p.role) addLine('ficha-line', p.role);
@@ -556,14 +577,10 @@ function openAbout() {
     });
 }
 
-// cierre animado: los botones del menu vuelan hacia sitios aleatorios y el fondo se destapa;
-// sin animar (navegacion con wipe) se esconde al instante
-function hideOverlay(ov, animated) {
+// cierre animado siempre: los botones del menu vuelan hacia sitios aleatorios
+// y el fondo se destapa (al navegar, el vuelo convive con el wipe)
+function hideOverlay(ov) {
     if (ov.classList.contains('hidden') || ov.classList.contains('closing')) return;
-    if (!animated) {
-        ov.classList.add('hidden');
-        return;
-    }
     if (ov === menuOverlay) {
         menuOverlay.querySelectorAll('button').forEach((b, i) => {
             scatterVars(b, 'o');
@@ -577,9 +594,9 @@ function hideOverlay(ov, animated) {
     }, 520);
 }
 
-function closeOverlays(animated) {
-    hideOverlay(menuOverlay, animated);
-    hideOverlay(aboutOverlay, animated);
+function closeOverlays() {
+    hideOverlay(menuOverlay);
+    hideOverlay(aboutOverlay);
     document.body.classList.remove('overlay-open');
 }
 
@@ -629,14 +646,16 @@ function buzz() {
 /* ===== Listeners ===== */
 
 function bindUI() {
-    // las tres esquinas abren el menu
+    // las tres esquinas abren el menu (la ficha ya no es <button> para poder
+    // llevar las flechitas del contador dentro; Enter la mantiene accesible)
     menuBtn.addEventListener('click', openMenu);
     brandBtn.addEventListener('click', openMenu);
     ficha.addEventListener('click', openMenu);
+    ficha.addEventListener('keydown', e => { if (e.key === 'Enter') openMenu(); });
 
     // cerrar ventanas
-    document.getElementById('menuClose').addEventListener('click', () => { playSfx('back'); closeOverlays(true); });
-    document.getElementById('aboutClose').addEventListener('click', () => { playSfx('back'); closeOverlays(true); });
+    document.getElementById('menuClose').addEventListener('click', () => { playSfx('back'); closeOverlays(); });
+    document.getElementById('aboutClose').addEventListener('click', () => { playSfx('back'); closeOverlays(); });
 
     // flechas laterales del carrusel
     document.getElementById('arrowPrev').addEventListener('click', () => { playSfx('move'); buzz(); prev(); });
@@ -701,12 +720,12 @@ function bindUI() {
 
     // cerrar overlays tocando el fondo
     menuOverlay.addEventListener('click', e => {
-        if (e.target === menuOverlay || e.target === menuNav) closeOverlays(true);
+        if (e.target === menuOverlay || e.target === menuNav) closeOverlays();
     });
-    aboutOverlay.addEventListener('click', e => { if (e.target === aboutOverlay) closeOverlays(true); });
+    aboutOverlay.addEventListener('click', e => { if (e.target === aboutOverlay) closeOverlays(); });
 
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') { closeOverlays(true); return; }
+        if (e.key === 'Escape') { closeOverlays(); return; }
         const tag = document.activeElement ? document.activeElement.tagName : '';
         if (tag === 'INPUT' || tag === 'BUTTON') return;
         const overlayOpen = !menuOverlay.classList.contains('hidden') ||

@@ -35,7 +35,7 @@
     <!-- Esquinas: las tres abren el menu -->
     <button id="menuBtn" class="ui" aria-label="abrir menú">menú</button>
     <button id="brandBtn" class="ui" aria-label="abrir menú">la diega</button>
-    <button id="ficha" class="ui ficha" aria-label="abrir menú"></button>
+    <div id="ficha" class="ui ficha" role="button" tabindex="0" aria-label="abrir menú"></div>
 
     <!-- Titulo gigante al cambiar de video -->
     <div id="bigTitle" class="big-title hidden" aria-hidden="true"></div>
@@ -49,8 +49,8 @@
         <input id="seekBar" class="ctrl" type="range" min="0" max="1000" value="0" aria-label="progreso">
         <button id="autoBtn" class="ctrl toggle on" aria-label="avance automático">auto</button>
         <button id="soundBtn" class="ctrl toggle on" aria-label="sonido">sound</button>
-        <button id="arrowPrev" class="ctrl edge-arrow left" aria-label="video anterior">◀</button>
-        <button id="arrowNext" class="ctrl edge-arrow right" aria-label="video siguiente">▶</button>
+        <button id="arrowPrev" class="ctrl edge-arrow left" aria-label="video anterior"></button>
+        <button id="arrowNext" class="ctrl edge-arrow right" aria-label="video siguiente"></button>
     </div>
 
     <!-- Menu: pantalla completa sobre el video difuminado -->
