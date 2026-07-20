@@ -270,19 +270,26 @@ body.controls-open .ficha {
     text-shadow: none;
 }
 
-/* al pasar por el contador asoman las flechitas para navegar */
+/* al pasar por el contador asoman las flechitas para navegar;
+   la de la izquierda no cuenta en el layout (margen negativo) para que el chip
+   quede pegado a la izquierda, y al hacer hover el chip se desplaza y le hace hueco */
 .level-arrow {
     width: 12px;
     height: 18px;
     background: no-repeat center / contain;
     filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
     opacity: 0;
-    transition: opacity 0.18s ease, transform 0.18s ease;
+    transition: opacity 0.18s ease, transform 0.18s ease, margin-left 0.18s ease;
 }
 
 .level-arrow.prev {
     background-image: url('data/icons/arrow-left.svg');
     transform: translateX(5px);
+    margin-left: -18px;
+}
+
+.ficha-level-row:hover .level-arrow.prev {
+    margin-left: 0;
 }
 
 .level-arrow.next {
@@ -810,9 +817,10 @@ body.title-flight .ficha {
     animation-timing-function: cubic-bezier(0.5, -0.25, 0.75, 0.4);
 }
 
-/* etiqueta de categoria: pegatina torcida */
+/* etiqueta de categoria: pegatina torcida con marquesina al pasar por encima */
 .menu-cat {
     position: relative;
+    overflow: hidden;
     font-size: 22px;
     letter-spacing: 0.1em;
     background: var(--highlight);
@@ -827,11 +835,6 @@ body.title-flight .ficha {
 .menu-cat:focus {
     transform: rotate(2deg) scale(1.08);
     outline: none;
-}
-
-/* marquesina dentro de la pegatina al pasar por encima */
-.menu-cat {
-    overflow: hidden;
 }
 
 .menu-cat .marquee {

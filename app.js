@@ -24,7 +24,8 @@ let menuBtn, brandBtn, ficha, menuOverlay, menuNav, aboutOverlay, aboutBody;
 let gestoriaView, gestoriaPhoto, bigTitle, wipe;
 
 async function init() {
-    const response = await fetch('data.json');
+    // no-store: que editar data.json se note sin pelearse con la cache
+    const response = await fetch('data.json', { cache: 'no-store' });
     DATA = await response.json();
 
     DATA.categories.forEach(cat => {
@@ -698,6 +699,7 @@ function bindUI() {
     seekBar.addEventListener('input', () => {
         seeking = true;
         engaged = true;
+        seekBar.style.setProperty('--p', (seekBar.value / 10) + '%');
         const v = curSlide().video;
         if (v.duration) v.currentTime = (seekBar.value / 1000) * v.duration;
     });
