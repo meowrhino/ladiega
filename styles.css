@@ -188,12 +188,16 @@ body.overlay-open .gestoria {
     top: 16px;
     left: 22px;
     font-size: 28px;
+    --tilt: -2deg;
+    transform: rotate(var(--tilt));
 }
 
 #brandBtn {
     top: 16px;
     right: 22px;
     font-size: 30px;
+    --tilt: 1.6deg;
+    transform: rotate(var(--tilt));
 }
 
 #menuBtn:hover,
@@ -202,31 +206,51 @@ body.overlay-open .gestoria {
 #brandBtn:focus-visible {
     color: var(--highlight);
     outline: none;
+    animation: cornerWiggle 0.4s ease-in-out;
+}
+
+@keyframes cornerWiggle {
+    0%, 100% { transform: rotate(var(--tilt)); }
+    30% { transform: rotate(calc(var(--tilt) + 4deg)) scale(1.06); }
+    70% { transform: rotate(calc(var(--tilt) - 3deg)) scale(1.06); }
 }
 
 .ficha {
-    bottom: 18px;
+    bottom: 44px;
     left: 22px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 2px;
     text-align: left;
+    transform: rotate(-1.4deg);
+    transition: transform 0.2s ease, opacity 0.25s ease 0.2s;
+}
+
+.ficha:hover {
+    transform: rotate(0.8deg) scale(1.04);
 }
 
 .ficha:hover .ficha-title {
     color: var(--highlight);
 }
 
+/* cada linea con su propio torcimiento suave */
 .ficha-title {
     font-size: 26px;
     line-height: 1.1;
+    transform: rotate(-1deg);
 }
 
 .ficha-line {
     font-size: 19px;
     line-height: 1.1;
     color: var(--dim);
+    transform: rotate(0.9deg);
+}
+
+.ficha-line + .ficha-line {
+    transform: rotate(-0.7deg);
 }
 
 /* ===== Flechas de carrusel ===== */
@@ -282,23 +306,21 @@ body[data-mode="gestoria"] .edge-arrow {
     display: none;
 }
 
-/* ===== Navegacion del video: barra arriba, botones abajo ===== */
+/* ===== Navegacion del video: elementos sueltos repartidos por la pantalla ===== */
 .controls {
     position: fixed;
-    left: 50%;
-    bottom: 18px;
-    transform: translateX(-50%);
+    inset: 0;
     z-index: 45;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    width: min(460px, 92vw);
-    padding: 8px 14px 4px;
-    transition: opacity 0.3s ease;
+    pointer-events: none;
 }
 
-.controls.faded {
+.controls .ctrl {
+    position: absolute;
+    pointer-events: auto;
+    transform: var(--base, none);
+}
+
+.controls.faded .ctrl {
     opacity: 0;
     pointer-events: none;
 }
@@ -307,47 +329,116 @@ body[data-mode="gestoria"] .edge-arrow {
     display: none;
 }
 
-.controls-row {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    width: 100%;
+/* cada elemento entra desde un sitio aleatorio y se marcha hacia otro distinto:
+   las coordenadas (--ix/--iy/--ir, --ox/--oy/--or) las sortea el JS en cada pasada */
+body.booted .controls:not(.faded) .ctrl {
+    animation: ctrlIn 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
 }
 
-#autoBtn {
-    justify-self: start;
+body.booted .controls.faded .ctrl {
+    animation: ctrlOut 0.38s cubic-bezier(0.5, -0.25, 0.75, 0.4) both;
 }
 
-#soundBtn {
-    justify-self: end;
+.controls #playBtn { animation-delay: 0ms; }
+.controls #seekBar { animation-delay: 70ms; }
+.controls #autoBtn { animation-delay: 130ms; }
+.controls #soundBtn { animation-delay: 185ms; }
+
+@keyframes ctrlIn {
+    from {
+        opacity: 0;
+        transform: var(--base, none)
+            translate(var(--ix, 0px), var(--iy, 0px))
+            rotate(var(--ir, 0deg)) scale(0.65);
+    }
 }
 
-.controls button {
-    font-size: 22px;
-    line-height: 1;
-    color: var(--text-window);
+@keyframes ctrlOut {
+    to {
+        opacity: 0;
+        transform: var(--base, none)
+            translate(var(--ox, 0px), var(--oy, 0px))
+            rotate(var(--or, 0deg)) scale(0.65);
+    }
 }
 
-/* play/pause grande y centrado */
+/* play/pause en el centro, donde aterriza el titulo */
 .play-big {
-    font-size: 34px !important;
-    color: #fff !important;
-    padding: 0 14px;
+    --base: translate(-50%, -50%) rotate(-2deg);
+    left: 50%;
+    top: 50%;
+    font-size: clamp(40px, 6vw, 58px);
+    line-height: 1;
+    color: #fff;
+    padding: 6px 22px;
+    text-shadow: 4px 4px 0 #000;
 }
 
-.controls button:hover,
-.controls button:focus-visible {
-    color: var(--highlight) !important;
+/* splash amarillo del menu al pasar por encima */
+.play-big::before {
+    content: '';
+    position: absolute;
+    inset: 2px -8px;
+    z-index: -1;
+    background: var(--highlight);
+    clip-path: polygon(2% 20%, 55% 4%, 98% 0%, 100% 74%, 90% 100%, 30% 94%, 4% 100%, 0 52%);
+    display: none;
+}
+
+.play-big:hover,
+.play-big:focus-visible {
+    color: #000;
+    text-shadow: none;
     outline: none;
 }
 
+.play-big:hover::before,
+.play-big:focus-visible::before {
+    display: block;
+}
+
+/* mientras el titulo gigante vuela por el centro, el play se aparta */
+body.title-flight .play-big {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+/* toggles como pegatinas torcidas en el lateral derecho */
 .controls .toggle {
-    opacity: 0.35;
+    font-size: 22px;
+    line-height: 1;
+    padding: 2px 14px 4px;
+    color: var(--text-window);
+    opacity: 0.45;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+    transition: transform 0.15s ease;
+}
+
+#autoBtn {
+    --base: rotate(-3deg);
+    right: 16px;
+    bottom: 118px;
+}
+
+#soundBtn {
+    --base: rotate(2.5deg);
+    right: 20px;
+    bottom: 74px;
 }
 
 .controls .toggle.on {
     opacity: 1;
-    color: var(--highlight);
+    background: var(--highlight);
+    color: #000;
+    text-shadow: none;
+    clip-path: polygon(0 14%, 96% 0, 100% 88%, 4% 100%);
+}
+
+.controls .toggle:hover,
+.controls .toggle:focus-visible {
+    transform: var(--base) scale(1.12) rotate(2deg);
+    outline: none;
 }
 
 /* proyecto suelto: sin carrusel */
@@ -356,10 +447,13 @@ body[data-mode="gestoria"] .edge-arrow {
 }
 
 #seekBar {
+    --base: translateX(-50%) rotate(-0.6deg);
+    left: 50%;
+    bottom: 12px;
+    width: min(600px, 88vw);
     -webkit-appearance: none;
     appearance: none;
-    width: 100%;
-    height: 4px;
+    height: 5px;
     background: rgba(216, 219, 255, 0.35);
     outline: none;
     cursor: pointer;
@@ -368,15 +462,15 @@ body[data-mode="gestoria"] .edge-arrow {
 #seekBar::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 10px;
-    height: 18px;
+    width: 12px;
+    height: 22px;
     background: var(--highlight);
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
 }
 
 #seekBar::-moz-range-thumb {
-    width: 10px;
-    height: 18px;
+    width: 12px;
+    height: 22px;
     border-radius: 0;
     background: var(--highlight);
     border: none;
@@ -404,6 +498,25 @@ body[data-mode="gestoria"] .edge-arrow {
     display: none;
 }
 
+/* cada letra cae con su propia rotacion y altura (vars sorteadas en JS) */
+.big-title .bt-word {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.big-title .bt-letter {
+    display: inline-block;
+    transform: rotate(var(--lr, 0deg));
+    animation: letterIn 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+
+@keyframes letterIn {
+    from {
+        opacity: 0;
+        transform: translateY(var(--ly, 0px)) rotate(calc(var(--lr, 0deg) * 4)) scale(0.3);
+    }
+}
+
 .big-title.to-corner {
     transition: transform 0.45s cubic-bezier(0.55, 0, 0.2, 1), opacity 0.4s ease 0.05s;
     transform: translate(-50%, -50%) scale(0.28) translate(-120%, 300%);
@@ -422,10 +535,6 @@ body[data-mode="gestoria"] .edge-arrow {
 }
 
 /* la ficha espera a que el titulo llegue a la esquina */
-.ficha {
-    transition: opacity 0.25s ease 0.2s;
-}
-
 body.title-flight .ficha {
     opacity: 0;
 }
@@ -773,14 +882,28 @@ body.title-flight .ficha {
 
 /* ===== Movil ===== */
 @media (max-width: 768px) {
-    .controls {
-        bottom: 96px;
-        width: min(340px, 90vw);
-        padding: 6px 10px 3px;
+    .play-big {
+        font-size: 38px;
+        padding: 10px 26px;
     }
 
-    .play-big {
-        font-size: 30px !important;
+    #seekBar {
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        width: 86vw;
+    }
+
+    .ficha {
+        bottom: calc(44px + env(safe-area-inset-bottom));
+    }
+
+    #autoBtn {
+        bottom: calc(128px + env(safe-area-inset-bottom));
+        right: 12px;
+    }
+
+    #soundBtn {
+        bottom: calc(84px + env(safe-area-inset-bottom));
+        right: 16px;
     }
 
     .edge-arrow {

@@ -258,7 +258,25 @@ let bigTitleTimerB = null;
 function showBigTitle(text) {
     clearTimeout(bigTitleTimerA);
     clearTimeout(bigTitleTimerB);
-    bigTitle.textContent = text;
+    // cada letra cae desde su propia altura con su propia rotacion
+    bigTitle.innerHTML = '';
+    const step = Math.min(26, 500 / Math.max(text.length, 1));
+    let li = 0;
+    text.split(' ').forEach((word, wi) => {
+        if (wi) bigTitle.appendChild(document.createTextNode(' '));
+        const w = document.createElement('span');
+        w.className = 'bt-word';
+        Array.from(word).forEach(ch => {
+            const s = document.createElement('span');
+            s.className = 'bt-letter';
+            s.textContent = ch;
+            s.style.setProperty('--lr', (Math.random() * 9 - 4.5).toFixed(1) + 'deg');
+            s.style.setProperty('--ly', Math.round(Math.random() * 44 - 22) + 'px');
+            s.style.animationDelay = Math.round(li++ * step) + 'ms';
+            w.appendChild(s);
+        });
+        bigTitle.appendChild(w);
+    });
     bigTitle.classList.remove('to-corner');
     bigTitle.classList.add('hidden');
     void bigTitle.offsetWidth;
@@ -521,13 +539,32 @@ function updatePlayBtn() {
 
 let hideTimer = null;
 
-function revealControls() {
+// sortea desde donde entra (prefijo 'i') o hacia donde se marcha (prefijo 'o') un control
+function scatterVars(el, prefix) {
+    const a = Math.random() * Math.PI * 2;
+    const d = 90 + Math.random() * 180;
+    el.style.setProperty('--' + prefix + 'x', Math.round(Math.cos(a) * d) + 'px');
+    el.style.setProperty('--' + prefix + 'y', Math.round(Math.sin(a) * d) + 'px');
+    el.style.setProperty('--' + prefix + 'r', Math.round(Math.random() * 30 - 15) + 'deg');
+}
+
+function showControls() {
     if (mode === 'gestoria') return;
-    controls.classList.remove('faded');
+    document.body.classList.add('booted');
+    if (controls.classList.contains('faded')) {
+        controls.querySelectorAll('.ctrl').forEach(el => scatterVars(el, 'i'));
+        controls.classList.remove('faded');
+    }
     if (!isTouch) {
         clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => controls.classList.add('faded'), 2800);
+        hideTimer = setTimeout(hideControls, 2800);
     }
+}
+
+function hideControls() {
+    if (controls.classList.contains('faded')) return;
+    controls.querySelectorAll('.ctrl').forEach(el => scatterVars(el, 'o'));
+    controls.classList.add('faded');
 }
 
 /* ===== Listeners ===== */
@@ -562,6 +599,7 @@ function bindUI() {
 
     playBtn.addEventListener('click', () => {
         engaged = true;
+        playSfx('select');
         const v = curSlide().video;
         if (v.paused) v.play().catch(() => {});
         else v.pause();
@@ -569,11 +607,13 @@ function bindUI() {
 
     autoBtn.addEventListener('click', () => {
         auto = !auto;
+        playSfx('move');
         autoBtn.classList.toggle('on', auto);
     });
 
     soundBtn.addEventListener('click', () => {
         soundOn = !soundOn;
+        playSfx('move');
         slides.forEach(s => { s.video.muted = !soundOn; });
         soundBtn.classList.toggle('on', soundOn);
     });
@@ -588,9 +628,12 @@ function bindUI() {
 
     // la telita: hover en escritorio, toque en movil
     if (isTouch) {
-        stage.addEventListener('click', () => controls.classList.toggle('faded'));
+        stage.addEventListener('click', () => {
+            if (controls.classList.contains('faded')) showControls();
+            else hideControls();
+        });
     } else {
-        window.addEventListener('pointermove', revealControls);
+        window.addEventListener('pointermove', showControls);
     }
 
     // cerrar overlays tocando el fondo
