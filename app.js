@@ -21,7 +21,7 @@ let cur = 0;
 
 // Elementos
 let stage, controls, playBtn, seekBar, autoBtn, soundBtn;
-let menuBtn, brandBtn, ficha, menuOverlay, menuNav, aboutOverlay, aboutBody;
+let menuBtn, brandBtn, ficha, menuOverlay, menuNav;
 let gestoriaView, gestoriaPhoto, bigTitle, wipe;
 
 async function init() {
@@ -50,8 +50,6 @@ async function init() {
     ficha = document.getElementById('ficha');
     menuOverlay = document.getElementById('menuOverlay');
     menuNav = document.getElementById('menuNav');
-    aboutOverlay = document.getElementById('aboutOverlay');
-    aboutBody = document.getElementById('aboutBody');
     gestoriaView = document.getElementById('gestoriaView');
     gestoriaPhoto = document.getElementById('gestoriaPhoto');
 
@@ -59,7 +57,6 @@ async function init() {
 
     setupSlides();
     buildMenu();
-    buildAbout();
     bindUI();
     goHome(true);
 }
@@ -490,123 +487,69 @@ function buildMenu() {
 
     menuNav.appendChild(mkBtn('menu-item menu-link', (DATA.about && DATA.about.title) || 'about', openAbout, MENU_ICONS.about));
 
-    /* PROTO ABOUT — TEMPORAL: borra esta línea para quitar el prototipo del menú. */
-    menuNav.appendChild(mkBtn('menu-item menu-link proto-link', 'about · oscilador', () => openProtoAbout('c'), MENU_ICONS.about));
-    /* /PROTO ABOUT */
-
     if (DATA.gestoria) {
         menuNav.appendChild(mkBtn('menu-item menu-link', DATA.gestoria.label || 'gestoría', goGestoria, MENU_ICONS.gestoria));
     }
 }
 
-// about como ficha de personaje: retrato, clase y stats con barritas
-function buildAbout() {
-    aboutBody.innerHTML = '';
-    const about = DATA.about || {};
-    const card = document.createElement('div');
-    card.className = 'stat-card';
-
-    if (about.photo) {
-        const img = document.createElement('img');
-        img.className = 'stat-photo';
-        img.src = about.photo;
-        img.alt = about.name || 'la diega';
-        card.appendChild(img);
-    }
-
-    const name = document.createElement('div');
-    name.className = 'stat-name';
-    name.textContent = about.name || 'la diega';
-    card.appendChild(name);
-
-    if (about.clase) {
-        const cls = document.createElement('div');
-        cls.className = 'stat-class';
-        cls.textContent = about.clase;
-        card.appendChild(cls);
-    }
-
-    if (about.stats && about.stats.length) {
-        const rows = document.createElement('div');
-        rows.className = 'stat-rows';
-        about.stats.forEach((st, i) => {
-            const row = document.createElement('div');
-            row.className = 'stat-row';
-            const label = document.createElement('span');
-            label.className = 'stat-label';
-            label.textContent = st.label;
-            row.appendChild(label);
-            const bar = document.createElement('span');
-            bar.className = 'stat-bar';
-            for (let c = 0; c < 10; c++) {
-                const cell = document.createElement('span');
-                cell.className = 'stat-cell' + (c < st.value ? ' filled' : '');
-                if (c < st.value) cell.style.animationDelay = (i * 90 + c * 40) + 'ms';
-                bar.appendChild(cell);
-            }
-            row.appendChild(bar);
-            rows.appendChild(row);
-        });
-        card.appendChild(rows);
-    }
-
-    (about.text || []).forEach(line => {
-        const p = document.createElement('p');
-        p.textContent = line;
-        card.appendChild(p);
-    });
-
-    aboutBody.appendChild(card);
-}
 
 /* ============================================================
-   PROTO ABOUT "oscilador" — TEMPORAL, en pruebas.
-   Para ELIMINAR: borra (1) este bloque entero, (2) el bloque
-   "PROTO ABOUT" del final de styles.css y (3) la línea marcada
-   "PROTO ABOUT" dentro de buildMenu().
+   ABOUT: ficha de la diega que se convierte en un sintetizador.
+   En reposo son stats (musica / diseño sonoro / papeleo); al pulsar
+   "cambiar a oscilador" los mismos faders pasan a ser los controles
+   reales del sonido (nota / timbre / eco) y la onda se puede tocar.
+   El overlay se inyecta desde aquí, no existe en index.html.
    ============================================================ */
-let protoOverlay = null;
+let oscOverlay = null;
 
-function ensureProtoOverlay() {
-    if (protoOverlay) return protoOverlay;
-    protoOverlay = document.createElement('div');
-    protoOverlay.className = 'overlay proto-about hidden';
-    protoOverlay.innerHTML =
+function ensureOscOverlay() {
+    if (oscOverlay) return oscOverlay;
+    oscOverlay = document.createElement('div');
+    oscOverlay.className = 'overlay osc-about hidden';
+    oscOverlay.innerHTML =
         '<button class="overlay-close" aria-label="cerrar">×</button>' +
-        '<div class="proto-inner"></div>';
-    document.body.appendChild(protoOverlay);
-    protoOverlay.addEventListener('click', e => {
-        if (e.target === protoOverlay) { playSfx('back'); closeProtoAbout(); }
+        '<div class="osc-inner"></div>';
+    document.body.appendChild(oscOverlay);
+    oscOverlay.addEventListener('click', e => {
+        if (e.target === oscOverlay) { playSfx('back'); closeOscAbout(); }
     });
-    protoOverlay.querySelector('.overlay-close')
-        .addEventListener('click', () => { playSfx('back'); closeProtoAbout(); });
+    oscOverlay.querySelector('.overlay-close')
+        .addEventListener('click', () => { playSfx('back'); closeOscAbout(); });
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && protoOverlay && !protoOverlay.classList.contains('hidden')) closeProtoAbout();
+        if (!oscOverlay || oscOverlay.classList.contains('hidden')) return;
+        if (e.key === 'Escape') { closeOscAbout(); return; }
+        // teclado: 7 teclas repartidas por la pentatónica
+        if (!oscAnim.on) return;
+        const i = 'zxcvbnm'.indexOf(e.key.toLowerCase());
+        if (i === -1) return;
+        e.preventDefault();
+        oscSetFader(oscOverlay, 'freq', (i * 10) / 6);
+        oscAudioApply(oscOverlay);
     });
-    return protoOverlay;
+    return oscOverlay;
 }
 
-function closeProtoAbout() {
-    if (!protoOverlay) return;
-    protoStopOsc();
-    protoOverlay.classList.add('hidden');
+function closeOscAbout() {
+    if (!oscOverlay) return;
+    oscAnimStop();
+    oscOverlay.classList.add('hidden');
     document.body.classList.remove('overlay-open');
 }
 
 // parámetros: en reposo son la "ficha", en modo oscilador son los controles reales
-const PROTO_C_PARAMS = [
-    { label: 'musica',        oscLabel: 'frecuencia', value: 10, osc: 'freq'  },
-    { label: 'diseño sonoro', oscLabel: 'forma',      value: 9,  osc: 'shape' },
-    { label: 'papeleo',       oscLabel: 'ruido',      value: 2,  osc: 'noise' }
+const OSC_PARAMS = [
+    { label: 'musica',        oscLabel: 'nota',  value: 10, osc: 'freq'  },
+    { label: 'diseño sonoro', oscLabel: 'timbre', value: 9, osc: 'shape' },
+    { label: 'papeleo',       oscLabel: 'eco',   value: 2,  osc: 'echo'  }
 ];
 
 // oscilador en vivo: la onda de arriba se dibuja a partir de los 3 faders
-let protoOsc = { on: false, raf: null, phase: 0 };
-let protoAudio = null;   // nodos de Web Audio mientras suena
-let protoVol = 5;        // 0..8, volumen del oscilador
+let oscAnim = { on: false, raf: null, phase: 0 };
+let oscAudio = null;   // nodos de Web Audio mientras suena
+let oscVol = 5;        // 0..8, volumen del oscilador
 
 // misma curva que dibuja el canvas: tanh(sin) → de seno redondeado a casi cuadrada
-function protoTanhCurve(drive) {
+function oscTanhCurve(drive) {
     const n = 1024, c = new Float32Array(n);
     for (let i = 0; i < n; i++) c[i] = Math.tanh((-1 + (2 * i) / (n - 1)) * drive);
     return c;
@@ -614,136 +557,209 @@ function protoTanhCurve(drive) {
 
 // escala pentatónica: caiga donde caiga el fader, siempre suena afinado.
 // convierte el cacharro en algo que se puede tocar en vez de una sirena.
-const PROTO_PENTA = [0, 3, 5, 7, 10];
-function protoNoteHz(step) {
+const OSC_PENTA = [0, 3, 5, 7, 10];
+function oscNoteHz(step) {
     const s = Math.max(0, Math.min(10, Math.round(step)));
-    const semi = PROTO_PENTA[s % 5] + Math.floor(s / 5) * 12;
+    const semi = OSC_PENTA[s % 5] + Math.floor(s / 5) * 12;
     return 110 * Math.pow(2, semi / 12);   // de La2 hacia arriba, ~2 octavas
 }
 
 // mueve un fader por código (lo usan el arrastre y la onda tocable)
-function protoSetFader(ov, role, val) {
-    const f = ov.querySelector('.pa-c-fader[data-osc="' + role + '"]');
+function oscSetFader(ov, role, val) {
+    const f = ov.querySelector('.oscab-fader[data-osc="' + role + '"]');
     if (!f) return;
     const v = Math.max(0, Math.min(10, Math.round(val)));
     f.dataset.val = v;
     const pct = (v * 10) + '%';
-    const fill = f.querySelector('.pa-c-fill');
+    const fill = f.querySelector('.oscab-fill');
     fill.style.animation = 'none';
     fill.style.height = pct;
-    f.querySelector('.pa-c-knob').style.bottom = pct;
+    f.querySelector('.oscab-knob').style.bottom = pct;
 }
 
-function protoAudioStart() {
+/* cadena: 2 osciladores (uno desafinado = más gordo) → tanh → filtro → amp
+   → seco + eco realimentado → master. El eco es lo que aporta "papeleo". */
+function oscAudioStart() {
     try {
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
         const ctx = audioCtx;
+
         const master = ctx.createGain();
         master.gain.value = 0;
         master.connect(ctx.destination);
 
         const osc = ctx.createOscillator();
-        osc.type = 'sine';
+        const osc2 = ctx.createOscillator();
+        osc.type = osc2.type = 'sine';
+        osc2.detune.value = 9;            // coro sutil, quita el pitido plano
+
         const shaper = ctx.createWaveShaper();
-        shaper.curve = protoTanhCurve(1);
+        shaper.curve = oscTanhCurve(1);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.Q.value = 6;               // resonancia: el "wah" clásico
+
+        const amp = ctx.createGain();
+        amp.gain.value = 1;               // el arpegiador lo usa de envolvente
+
         const tone = ctx.createGain();
-        tone.gain.value = 0.22;
-        osc.connect(shaper); shaper.connect(tone); tone.connect(master);
-        osc.start();
+        tone.gain.value = 0.16;
 
-        // ruido blanco en bucle: es lo que aporta el fader de papeleo
-        const len = Math.floor(ctx.sampleRate * 2);
-        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-        const data = buf.getChannelData(0);
-        for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
-        const noiseSrc = ctx.createBufferSource();
-        noiseSrc.buffer = buf; noiseSrc.loop = true;
-        const noiseGain = ctx.createGain();
-        noiseGain.gain.value = 0;
-        noiseSrc.connect(noiseGain); noiseGain.connect(master);
-        noiseSrc.start();
+        osc.connect(shaper); osc2.connect(shaper);
+        shaper.connect(filter); filter.connect(amp); amp.connect(tone);
+        tone.connect(master);
+        osc.start(); osc2.start();
 
-        protoAudio = { ctx, osc, shaper, noiseGain, master, noiseSrc };
-    } catch (e) { protoAudio = null; }
+        // eco con realimentación
+        const delay = ctx.createDelay(1.5);
+        delay.delayTime.value = 0.26;
+        const feedback = ctx.createGain();
+        feedback.gain.value = 0;
+        const wet = ctx.createGain();
+        wet.gain.value = 0;
+        tone.connect(delay);
+        delay.connect(feedback); feedback.connect(delay);
+        delay.connect(wet); wet.connect(master);
+
+        oscAudio = { ctx, osc, osc2, shaper, filter, amp, master, delay, feedback, wet };
+    } catch (e) { oscAudio = null; }
 }
 
-function protoAudioStop() {
-    if (!protoAudio) return;
+function oscAudioStop() {
+    oscArpStop();
+    if (!oscAudio) return;
     try {
-        const t = protoAudio.ctx.currentTime;
-        protoAudio.master.gain.cancelScheduledValues(t);
-        protoAudio.master.gain.setTargetAtTime(0, t, 0.02);
-        protoAudio.osc.stop(t + 0.12);
-        protoAudio.noiseSrc.stop(t + 0.12);
+        const t = oscAudio.ctx.currentTime;
+        oscAudio.master.gain.cancelScheduledValues(t);
+        oscAudio.master.gain.setTargetAtTime(0, t, 0.02);
+        oscAudio.osc.stop(t + 0.2);
+        oscAudio.osc2.stop(t + 0.2);
     } catch (e) { /* ya parado */ }
-    protoAudio = null;
+    oscAudio = null;
+}
+
+function oscGetP(ov, role) {
+    const f = ov.querySelector('.oscab-fader[data-osc="' + role + '"]');
+    return f ? (+f.dataset.val) / 10 : 0.5;
 }
 
 // vuelca los faders (y el volumen) a los nodos de audio
-function protoAudioApply(ov) {
-    if (!protoAudio) return;
-    const getP = role => {
-        const f = ov.querySelector('.pa-c-fader[data-osc="' + role + '"]');
-        return f ? (+f.dataset.val) / 10 : 0.5;
-    };
-    const t = protoAudio.ctx.currentTime;
-    protoAudio.osc.frequency.setTargetAtTime(protoNoteHz(getP('freq') * 10), t, 0.02);
-    protoAudio.shaper.curve = protoTanhCurve(1 + getP('shape') * 3);
-    protoAudio.noiseGain.gain.setTargetAtTime(getP('noise') * 0.10, t, 0.03);
-    protoAudio.master.gain.setTargetAtTime((protoVol / 8) * 0.5, t, 0.03);
+function oscAudioApply(ov) {
+    if (!oscAudio) return;
+    const t = oscAudio.ctx.currentTime;
+    const shape = oscGetP(ov, 'shape');
+    const echo = oscGetP(ov, 'echo');
+
+    if (!oscArp.on) {
+        const hz = oscNoteHz(oscGetP(ov, 'freq') * 10);
+        oscAudio.osc.frequency.setTargetAtTime(hz, t, 0.02);
+        oscAudio.osc2.frequency.setTargetAtTime(hz, t, 0.02);
+    }
+    // timbre = forma de onda + brillo del filtro, los dos a la vez
+    oscAudio.shaper.curve = oscTanhCurve(1 + shape * 3);
+    oscAudio.filter.frequency.setTargetAtTime(250 * Math.pow(16, shape), t, 0.03);
+    oscAudio.feedback.gain.setTargetAtTime(echo * 0.62, t, 0.03);
+    oscAudio.wet.gain.setTargetAtTime(echo * 0.85, t, 0.03);
+    oscAudio.master.gain.setTargetAtTime((oscVol / 8) * 0.5, t, 0.03);
 }
 
-function protoStopOsc() {
-    if (protoOsc.raf) cancelAnimationFrame(protoOsc.raf);
-    protoOsc.raf = null;
-    protoOsc.on = false;
-    protoAudioStop();
+/* arpegiador: recorre la pentatónica sola y marca el ritmo con la envolvente */
+let oscArp = { on: false, timer: null, i: 0 };
+
+function oscArpStop() {
+    if (oscArp.timer) clearInterval(oscArp.timer);
+    oscArp.timer = null;
+    oscArp.on = false;
+    if (oscAudio) {
+        const t = oscAudio.ctx.currentTime;
+        oscAudio.amp.gain.cancelScheduledValues(t);
+        oscAudio.amp.gain.setTargetAtTime(1, t, 0.03);
+    }
 }
-function protoStartOsc(ov) {
-    const cv = ov.querySelector('.pa-c-scope');
+
+function oscArpStart(ov) {
+    oscArp.on = true;
+    oscArp.i = 0;
+    const patron = [0, 2, 4, 2, 5, 2];
+    const paso = () => {
+        if (!oscAudio) return;
+        const base = +ov.querySelector('.oscab-fader[data-osc="freq"]').dataset.val;
+        const n = Math.max(0, Math.min(10, base - 4 + patron[oscArp.i % patron.length]));
+        const t = oscAudio.ctx.currentTime;
+        const hz = oscNoteHz(n);
+        oscAudio.osc.frequency.setValueAtTime(hz, t);
+        oscAudio.osc2.frequency.setValueAtTime(hz, t);
+        oscAudio.amp.gain.cancelScheduledValues(t);
+        oscAudio.amp.gain.setValueAtTime(0.001, t);
+        oscAudio.amp.gain.exponentialRampToValueAtTime(1, t + 0.012);
+        oscAudio.amp.gain.exponentialRampToValueAtTime(0.02, t + 0.17);
+        oscArp.i++;
+    };
+    paso();
+    oscArp.timer = setInterval(paso, 190);
+}
+
+function oscAnimStop() {
+    if (oscAnim.raf) cancelAnimationFrame(oscAnim.raf);
+    oscAnim.raf = null;
+    oscAnim.on = false;
+    oscAudioStop();
+}
+function oscAnimStart(ov) {
+    const cv = ov.querySelector('.oscab-scope');
     if (!cv) return;
     const ctx = cv.getContext('2d');
     const W = cv.width, H = cv.height;
     const yellow = (getComputedStyle(document.documentElement).getPropertyValue('--highlight') || '#ffe95c').trim();
-    const getP = role => { const f = ov.querySelector('.pa-c-fader[data-osc="' + role + '"]'); return f ? (+f.dataset.val) / 10 : 0.5; };
-    const draw = () => {
-        const freq = 1 + getP('freq') * 3;   // musica → nº de ciclos (1..4)
-        const shape = getP('shape');          // diseño sonoro → seno → cuadrada
-        const noise = getP('noise');          // papeleo → ruido que ensucia la señal
-        protoOsc.phase += 0.08;
-        ctx.clearRect(0, 0, W, H);
+    // una pasada de la onda; el eco se pinta como repeticiones desvaídas detrás
+    const traza = (freq, shape, desfase, alpha, ancho) => {
+        ctx.globalAlpha = alpha;
         ctx.beginPath();
         for (let x = 0; x <= W; x += 2) {
-            const theta = (x / W) * freq * Math.PI * 2 + protoOsc.phase;
-            let v = Math.tanh(Math.sin(theta) * (1 + shape * 3));
-            v += (Math.random() * 2 - 1) * noise * 0.4;
-            const y = H / 2 - v * (H / 2 - 5);
+            const theta = (x / W) * freq * Math.PI * 2 + oscAnim.phase - desfase;
+            const v = Math.tanh(Math.sin(theta) * (1 + shape * 3));
+            const y = H / 2 - v * (H / 2 - 6);
             x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = yellow;
-        ctx.lineWidth = 3;
-        ctx.lineJoin = 'round';
+        ctx.lineWidth = ancho;
         ctx.stroke();
-        protoOsc.raf = requestAnimationFrame(draw);
+        ctx.globalAlpha = 1;
+    };
+    const draw = () => {
+        const nota = oscGetP(ov, 'freq');
+        const shape = oscGetP(ov, 'shape');
+        const echo = oscGetP(ov, 'echo');
+        const freq = 1 + nota * 3;          // nº de ciclos visibles
+        oscAnim.phase += 0.05 + nota * 0.06;
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = yellow;
+        ctx.lineJoin = 'round';
+        for (let e = 3; e >= 1; e--) {      // las colas del eco, de atrás a delante
+            const a = echo * Math.pow(0.55, e);
+            if (a > 0.02) traza(freq, shape, e * 0.9, a, 2);
+        }
+        traza(freq, shape, 0, 1, 3);
+        oscAnim.raf = requestAnimationFrame(draw);
     };
     draw();
 }
-function wireProtoC(ov) {
-    const btn = ov.querySelector('.pa-c-osc-btn');
-    const root = ov.querySelector('.pa-c');
-    const songBtn = ov.querySelector('.pa-c-song');
+function wireOscAbout(ov) {
+    const btn = ov.querySelector('.oscab-osc-btn');
+    const root = ov.querySelector('.oscab');
+    const songBtn = ov.querySelector('.oscab-song');
 
     // en modo oscilador los faders enseñan lo que hacen de verdad
     const setLabels = osc => {
-        ov.querySelectorAll('.pa-c-fader').forEach((f, i) => {
-            const p = PROTO_C_PARAMS[i];
-            if (p) f.querySelector('.pa-c-flbl').textContent = osc ? p.oscLabel : p.label;
+        ov.querySelectorAll('.oscab-fader').forEach((f, i) => {
+            const p = OSC_PARAMS[i];
+            if (p) f.querySelector('.oscab-flbl').textContent = osc ? p.oscLabel : p.label;
         });
     };
 
     const paintVol = () => {
-        ov.querySelectorAll('.pa-c-vseg').forEach((s, i) => s.classList.toggle('on', i < protoVol));
+        ov.querySelectorAll('.oscab-vseg').forEach((s, i) => s.classList.toggle('on', i < oscVol));
     };
     paintVol();
 
@@ -754,29 +770,40 @@ function wireProtoC(ov) {
 
     if (btn && root) btn.addEventListener('click', () => {
         playSfx('move');
-        if (protoOsc.on) {
-            protoStopOsc();
+        if (oscAnim.on) {
+            oscAnimStop();
             root.classList.remove('oscillator');
             btn.textContent = 'cambiar a oscilador';
             setLabels(false);
+            const a = ov.querySelector('.oscab-arp');
+            if (a) a.classList.remove('on');
         } else {
-            protoOsc.on = true;
+            oscAnim.on = true;
             root.classList.add('oscillator');
             btn.textContent = 'volver a la onda';
             setLabels(true);
-            protoStartOsc(ov);
-            protoAudioStart();
-            protoAudioApply(ov);
+            oscAnimStart(ov);
+            oscAudioStart();
+            oscAudioApply(ov);
             syncSong();   // el piloto enseña si la canción suena o no, sin tocarla
         }
     });
 
+    // arpegiador: toca solo un patrón de la pentatónica
+    const arpBtn = ov.querySelector('.oscab-arp');
+    if (arpBtn) arpBtn.addEventListener('click', () => {
+        playSfx('move');
+        if (oscArp.on) oscArpStop();
+        else if (oscAudio) oscArpStart(ov);
+        arpBtn.classList.toggle('on', oscArp.on);
+    });
+
     // volumen del oscilador
-    ov.querySelectorAll('.pa-c-vbtn').forEach(b => {
+    ov.querySelectorAll('.oscab-vbtn').forEach(b => {
         b.addEventListener('click', () => {
-            protoVol = Math.max(0, Math.min(8, protoVol + (+b.dataset.d)));
+            oscVol = Math.max(0, Math.min(8, oscVol + (+b.dataset.d)));
             paintVol();
-            protoAudioApply(ov);
+            oscAudioApply(ov);
             playSfx('move');
         });
     });
@@ -793,14 +820,14 @@ function wireProtoC(ov) {
     });
 
     // faders arrastrables: mueven los parámetros del oscilador en vivo
-    ov.querySelectorAll('.pa-c-fader').forEach(f => {
-        const track = f.querySelector('.pa-c-track');
+    ov.querySelectorAll('.oscab-fader').forEach(f => {
+        const track = f.querySelector('.oscab-track');
         const role = f.dataset.osc;
         const setFromY = clientY => {
             const r = track.getBoundingClientRect();
             const p = Math.max(0, Math.min(1, 1 - (clientY - r.top) / r.height));
-            protoSetFader(ov, role, p * 10);
-            protoAudioApply(ov);
+            oscSetFader(ov, role, p * 10);
+            oscAudioApply(ov);
         };
         let drag = false;
         track.addEventListener('pointerdown', e => { drag = true; try { track.setPointerCapture(e.pointerId); } catch (_) {} setFromY(e.clientY); });
@@ -810,15 +837,15 @@ function wireProtoC(ov) {
     });
 
     // la onda se toca: arrastrar por encima cambia nota (x) y forma (y)
-    const scope = ov.querySelector('.pa-c-scope');
+    const scope = ov.querySelector('.oscab-scope');
     if (scope) {
         const playAt = (cx, cy) => {
             const r = scope.getBoundingClientRect();
             const px = Math.max(0, Math.min(1, (cx - r.left) / r.width));
             const py = Math.max(0, Math.min(1, 1 - (cy - r.top) / r.height));
-            protoSetFader(ov, 'freq', px * 10);
-            protoSetFader(ov, 'shape', py * 10);
-            protoAudioApply(ov);
+            oscSetFader(ov, 'freq', px * 10);
+            oscSetFader(ov, 'shape', py * 10);
+            oscAudioApply(ov);
         };
         let playing = false;
         scope.addEventListener('pointerdown', e => {
@@ -832,58 +859,56 @@ function wireProtoC(ov) {
     }
 }
 
-const PROTO_RENDER = {
-    // C — mesa de mezclas: onda arriba (barras o osciloscopio en vivo) + faders
-    c(about) {
+// mesa de mezclas: onda arriba (barras en reposo, osciloscopio en vivo) + faders
+function renderOscAbout(about) {
         let wave = '';
-        for (let i = 0; i < 28; i++) wave += '<span class="pa-c-bar" style="animation-delay:' + (i * 55) + 'ms"></span>';
-        const faders = PROTO_C_PARAMS.map(st => {
+        for (let i = 0; i < 28; i++) wave += '<span class="oscab-bar" style="animation-delay:' + (i * 55) + 'ms"></span>';
+        const faders = OSC_PARAMS.map(st => {
             const pct = (st.value * 10) + '%';
-            return '<div class="pa-c-fader" data-osc="' + st.osc + '" data-val="' + st.value + '">' +
-                '<span class="pa-c-track"><span class="pa-c-fill" style="height:' + pct + '"></span>' +
-                '<span class="pa-c-knob" style="bottom:' + pct + '"></span></span>' +
-                '<span class="pa-c-flbl">' + st.label + '</span>' +
+            return '<div class="oscab-fader" data-osc="' + st.osc + '" data-val="' + st.value + '">' +
+                '<span class="oscab-track"><span class="oscab-fill" style="height:' + pct + '"></span>' +
+                '<span class="oscab-knob" style="bottom:' + pct + '"></span></span>' +
+                '<span class="oscab-flbl">' + st.label + '</span>' +
             '</div>';
         }).join('');
         let vol = '';
-        for (let i = 0; i < 8; i++) vol += '<span class="pa-c-vseg"></span>';
-        return '<div class="pa-c">' +
-            '<div class="pa-c-wave">' + wave + '</div>' +
-            '<canvas class="pa-c-scope" width="640" height="140"></canvas>' +
-            '<div class="pa-c-head">' +
-                '<div class="pa-c-name">' + (about.name || 'la diega') + '</div>' +
-                '<div class="pa-c-role">' + (about.clase || '') + '</div>' +
+        for (let i = 0; i < 8; i++) vol += '<span class="oscab-vseg"></span>';
+        return '<div class="oscab">' +
+            '<div class="oscab-wave">' + wave + '</div>' +
+            '<canvas class="oscab-scope" width="640" height="140"></canvas>' +
+            '<div class="oscab-head">' +
+                '<div class="oscab-name">' + (about.name || 'la diega') + '</div>' +
+                '<div class="oscab-role">' + (about.clase || '') + '</div>' +
             '</div>' +
-            '<div class="pa-c-desk">' + faders + '</div>' +
-            // volumen del oscilador + chip para mutear la canción del vídeo
-            '<div class="pa-c-vol">' +
-                '<button class="pa-c-vbtn" data-d="-1" aria-label="bajar volumen">−</button>' +
-                '<span class="pa-c-vmeter">' + vol + '</span>' +
-                '<button class="pa-c-vbtn" data-d="1" aria-label="subir volumen">+</button>' +
-                '<button class="pa-c-song ctrl toggle on">canción</button>' +
+            '<div class="oscab-desk">' + faders + '</div>' +
+            // volumen, arpegiador y chip para mutear la canción del vídeo
+            '<div class="oscab-vol">' +
+                '<button class="oscab-vbtn" data-d="-1" aria-label="bajar volumen">−</button>' +
+                '<span class="oscab-vmeter">' + vol + '</span>' +
+                '<button class="oscab-vbtn" data-d="1" aria-label="subir volumen">+</button>' +
+                '<button class="oscab-chip oscab-arp">arpegio</button>' +
+                '<button class="oscab-chip oscab-song">canción</button>' +
             '</div>' +
-            '<button class="pa-c-osc-btn">cambiar a oscilador</button>' +
+            '<p class="oscab-hint">arrastra la onda o toca con las teclas Z X C V B N M</p>' +
+            '<button class="oscab-osc-btn">cambiar a oscilador</button>' +
         '</div>';
-    }
-};
+}
 
-function openProtoAbout(variant) {
-    const ov = ensureProtoOverlay();
+function openOscAbout() {
+    const ov = ensureOscOverlay();
     if (menuOverlay) menuOverlay.classList.add('hidden');
-    if (aboutOverlay) aboutOverlay.classList.add('hidden');
-    ov.className = 'overlay proto-about proto-' + variant;
-    ov.querySelector('.proto-inner').innerHTML = PROTO_RENDER[variant](DATA.about || {});
-    protoStopOsc();
-    if (variant === 'c') wireProtoC(ov);
+    ov.className = 'overlay osc-about';
+    ov.querySelector('.osc-inner').innerHTML = renderOscAbout(DATA.about || {});
+    oscAnimStop();
+    wireOscAbout(ov);
     document.body.classList.add('overlay-open');
     playSfx('select');
 }
-/* /PROTO ABOUT ============================================== */
 
 function openMenu() {
     clearTimeout(menuOverlay._hideTimer);
     menuOverlay.classList.remove('hidden', 'closing');
-    aboutOverlay.classList.add('hidden');
+    closeOscAbout();
     document.body.classList.add('overlay-open');
     playSfx('select');
     // cada boton entra desde un sitio aleatorio distinto
@@ -900,18 +925,7 @@ function openMenu() {
 }
 
 function openAbout() {
-    clearTimeout(aboutOverlay._hideTimer);
-    menuOverlay.classList.add('hidden');
-    aboutOverlay.classList.remove('hidden', 'closing');
-    document.body.classList.add('overlay-open');
-    // relanzar la animacion de las barritas
-    aboutOverlay.querySelectorAll('.stat-cell.filled').forEach(c => {
-        const d = c.style.animationDelay;
-        c.style.animation = 'none';
-        void c.offsetWidth;
-        c.style.animation = '';
-        c.style.animationDelay = d;
-    });
+    openOscAbout();
 }
 
 // cierre animado siempre: los botones del menu vuelan hacia sitios aleatorios
@@ -933,7 +947,7 @@ function hideOverlay(ov) {
 
 function closeOverlays() {
     hideOverlay(menuOverlay);
-    hideOverlay(aboutOverlay);
+    closeOscAbout();
     document.body.classList.remove('overlay-open');
 }
 
@@ -1007,7 +1021,6 @@ function bindUI() {
 
     // cerrar ventanas
     document.getElementById('menuClose').addEventListener('click', () => { playSfx('back'); closeOverlays(); });
-    document.getElementById('aboutClose').addEventListener('click', () => { playSfx('back'); closeOverlays(); });
 
     // flechas laterales del carrusel
     document.getElementById('arrowPrev').addEventListener('click', () => { playSfx('move'); buzz(); prev(); });
@@ -1078,14 +1091,13 @@ function bindUI() {
     menuOverlay.addEventListener('click', e => {
         if (e.target === menuOverlay || e.target === menuNav) closeOverlays();
     });
-    aboutOverlay.addEventListener('click', e => { if (e.target === aboutOverlay) closeOverlays(); });
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') { closeOverlays(); return; }
         const tag = document.activeElement ? document.activeElement.tagName : '';
         if (tag === 'INPUT' || tag === 'BUTTON') return;
         const overlayOpen = !menuOverlay.classList.contains('hidden') ||
-            !aboutOverlay.classList.contains('hidden');
+            (oscOverlay && !oscOverlay.classList.contains('hidden'));
         if (overlayOpen || mode === 'gestoria') return;
         if (e.key === ' ') { e.preventDefault(); playBtn.click(); }
         else if (e.key === 'ArrowRight') next();

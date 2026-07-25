@@ -145,20 +145,8 @@
   "about": {
     "title": "about",
     "name": "la diega",
-    "clase": "compositora · sound designer",
-    "photo": "data/logo-fantasy.png",
-    "_nota": "cambia photo por un retrato; los stats van de 0 a 10",
-    "stats": [
-      { "label": "music", "value": 10 },
-      { "label": "sound design", "value": 9 },
-      { "label": "sfx", "value": 9 },
-      { "label": "deadlines", "value": 7 },
-      { "label": "papeleo", "value": 2 }
-    ],
-    "text": [
-      "music, sound design & sfx",
-      "(edita nombre, clase, stats y este texto en data.json → about)"
-    ]
+    "clase": "compositora · diseñadora sonora",
+    "_nota": "el about es la ficha-sintetizador; los faders (musica / diseño sonoro / papeleo) se editan en OSC_PARAMS dentro de app.js"
   },
   "gestoria": {
     "label": "gestoría",
