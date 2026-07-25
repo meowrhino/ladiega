@@ -489,6 +489,13 @@ function buildMenu() {
     });
 
     menuNav.appendChild(mkBtn('menu-item menu-link', (DATA.about && DATA.about.title) || 'about', openAbout, MENU_ICONS.about));
+
+    /* PROTO ABOUT — TEMPORAL: 3 botones para comparar rediseños. Borra estas 3 líneas para quitarlos. */
+    menuNav.appendChild(mkBtn('menu-item menu-link proto-link', 'about · A · minimal', () => openProtoAbout('a'), MENU_ICONS.about));
+    menuNav.appendChild(mkBtn('menu-item menu-link proto-link', 'about · B · ficha', () => openProtoAbout('b'), MENU_ICONS.about));
+    menuNav.appendChild(mkBtn('menu-item menu-link proto-link', 'about · C · mezclas', () => openProtoAbout('c'), MENU_ICONS.about));
+    /* /PROTO ABOUT */
+
     if (DATA.gestoria) {
         menuNav.appendChild(mkBtn('menu-item menu-link', DATA.gestoria.label || 'gestoría', goGestoria, MENU_ICONS.gestoria));
     }
@@ -553,6 +560,194 @@ function buildAbout() {
 
     aboutBody.appendChild(card);
 }
+
+/* ============================================================
+   PROTOTIPOS ABOUT (A/B/C) — TEMPORAL, para comparar rediseños.
+   Para ELIMINAR todo: borra (1) este bloque entero, (2) el bloque
+   "PROTO ABOUT" del final de styles.css y (3) las 3 líneas marcadas
+   "PROTO ABOUT" dentro de buildMenu().
+   Para quedarte con UNA: deja su render/estilos y borra las otras.
+   ============================================================ */
+let protoOverlay = null;
+
+function ensureProtoOverlay() {
+    if (protoOverlay) return protoOverlay;
+    protoOverlay = document.createElement('div');
+    protoOverlay.className = 'overlay proto-about hidden';
+    protoOverlay.innerHTML =
+        '<button class="overlay-close" aria-label="cerrar">×</button>' +
+        '<div class="proto-inner"></div>';
+    document.body.appendChild(protoOverlay);
+    protoOverlay.addEventListener('click', e => {
+        if (e.target === protoOverlay) { playSfx('back'); closeProtoAbout(); }
+    });
+    protoOverlay.querySelector('.overlay-close')
+        .addEventListener('click', () => { playSfx('back'); closeProtoAbout(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && protoOverlay && !protoOverlay.classList.contains('hidden')) closeProtoAbout();
+    });
+    return protoOverlay;
+}
+
+function closeProtoAbout() {
+    if (!protoOverlay) return;
+    protoStopOsc();
+    protoOverlay.classList.add('hidden');
+    document.body.classList.remove('overlay-open');
+}
+
+// puntos ●/○ para la opción B
+function protoDots(v, max) {
+    let s = '';
+    for (let i = 0; i < max; i++) s += '<span class="pa-b-dot' + (i < v ? ' on' : '') + '"></span>';
+    return s;
+}
+
+// parámetros de la opción C — los faders son los controles del oscilador
+const PROTO_C_PARAMS = [
+    { label: 'musica',        value: 10, osc: 'freq'  },
+    { label: 'diseño sonoro', value: 9,  osc: 'shape' },
+    { label: 'papeleo',       value: 2,  osc: 'noise' }
+];
+
+// oscilador en vivo: la onda de arriba se dibuja a partir de los 3 faders
+let protoOsc = { on: false, raf: null, phase: 0 };
+function protoStopOsc() { if (protoOsc.raf) cancelAnimationFrame(protoOsc.raf); protoOsc.raf = null; protoOsc.on = false; }
+function protoStartOsc(ov) {
+    const cv = ov.querySelector('.pa-c-scope');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    const yellow = (getComputedStyle(document.documentElement).getPropertyValue('--highlight') || '#ffe95c').trim();
+    const getP = role => { const f = ov.querySelector('.pa-c-fader[data-osc="' + role + '"]'); return f ? (+f.dataset.val) / 10 : 0.5; };
+    const draw = () => {
+        const freq = 1 + getP('freq') * 3;   // musica → nº de ciclos (1..4)
+        const shape = getP('shape');          // diseño sonoro → seno → cuadrada
+        const noise = getP('noise');          // papeleo → ruido que ensucia la señal
+        protoOsc.phase += 0.08;
+        ctx.clearRect(0, 0, W, H);
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += 2) {
+            const theta = (x / W) * freq * Math.PI * 2 + protoOsc.phase;
+            let v = Math.tanh(Math.sin(theta) * (1 + shape * 3));
+            v += (Math.random() * 2 - 1) * noise * 0.4;
+            const y = H / 2 - v * (H / 2 - 5);
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = yellow;
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+        protoOsc.raf = requestAnimationFrame(draw);
+    };
+    draw();
+}
+function wireProtoC(ov) {
+    const btn = ov.querySelector('.pa-c-osc-btn');
+    const root = ov.querySelector('.pa-c');
+    if (btn && root) btn.addEventListener('click', () => {
+        playSfx('move');
+        if (protoOsc.on) {
+            protoStopOsc();
+            root.classList.remove('oscillator');
+            btn.textContent = 'cambiar a oscilador';
+        } else {
+            protoOsc.on = true;
+            root.classList.add('oscillator');
+            btn.textContent = 'volver a la onda';
+            protoStartOsc(ov);
+        }
+    });
+    // faders arrastrables: mueven los parámetros del oscilador en vivo
+    ov.querySelectorAll('.pa-c-fader').forEach(f => {
+        const track = f.querySelector('.pa-c-track');
+        const fill = f.querySelector('.pa-c-fill');
+        const knob = f.querySelector('.pa-c-knob');
+        const setFromY = clientY => {
+            const r = track.getBoundingClientRect();
+            let p = 1 - (clientY - r.top) / r.height;
+            p = Math.max(0, Math.min(1, p));
+            const val = Math.round(p * 10);
+            f.dataset.val = val;
+            const pct = (val * 10) + '%';
+            fill.style.animation = 'none';
+            fill.style.height = pct;
+            knob.style.bottom = pct;
+        };
+        let drag = false;
+        track.addEventListener('pointerdown', e => { drag = true; try { track.setPointerCapture(e.pointerId); } catch (_) {} setFromY(e.clientY); });
+        track.addEventListener('pointermove', e => { if (drag) setFromY(e.clientY); });
+        track.addEventListener('pointerup', () => { drag = false; });
+        track.addEventListener('pointercancel', () => { drag = false; });
+    });
+}
+
+const PROTO_RENDER = {
+    // A — minimal editorial, mismo lenguaje que el menú (fullscreen, centrado, pixel)
+    a(about) {
+        return '<div class="pa-a">' +
+            '<div class="pa-a-title">' + (about.name || 'la diega') + '</div>' +
+            '<div class="pa-a-role">' + (about.clase || '') + '</div>' +
+            '<p class="pa-a-bio">' + ((about.text || [])[0] || '') + '</p>' +
+            '<div class="pa-a-links">' +
+                '<a class="pa-a-link" href="#">email</a>' +
+                '<a class="pa-a-link" href="#">instagram</a>' +
+            '</div>' +
+        '</div>';
+    },
+    // B — ficha de artista integrada: retrato duotono + stats con puntos (sin caja)
+    b(about) {
+        const stats = (about.stats || []).map(st =>
+            '<div class="pa-b-stat"><span class="pa-b-lbl">' + st.label + '</span>' +
+            '<span class="pa-b-dots">' + protoDots(st.value, 10) + '</span></div>'
+        ).join('');
+        return '<div class="pa-b">' +
+            (about.photo ? '<div class="pa-b-portrait"><img src="' + about.photo + '" alt="' + (about.name || 'la diega') + '"></div>' : '') +
+            '<div class="pa-b-info">' +
+                '<div class="pa-b-name">' + (about.name || 'la diega') + '</div>' +
+                '<div class="pa-b-role">' + (about.clase || '') + '</div>' +
+                '<div class="pa-b-stats">' + stats + '</div>' +
+                '<p class="pa-b-bio">' + ((about.text || [])[0] || '') + '</p>' +
+            '</div>' +
+        '</div>';
+    },
+    // C — mesa de mezclas: onda arriba (barras o osciloscopio en vivo) + faders
+    c(about) {
+        let wave = '';
+        for (let i = 0; i < 28; i++) wave += '<span class="pa-c-bar" style="animation-delay:' + (i * 55) + 'ms"></span>';
+        const faders = PROTO_C_PARAMS.map(st => {
+            const pct = (st.value * 10) + '%';
+            return '<div class="pa-c-fader" data-osc="' + st.osc + '" data-val="' + st.value + '">' +
+                '<span class="pa-c-track"><span class="pa-c-fill" style="height:' + pct + '"></span>' +
+                '<span class="pa-c-knob" style="bottom:' + pct + '"></span></span>' +
+                '<span class="pa-c-flbl">' + st.label + '</span>' +
+            '</div>';
+        }).join('');
+        return '<div class="pa-c">' +
+            '<div class="pa-c-wave">' + wave + '</div>' +
+            '<canvas class="pa-c-scope" width="640" height="140"></canvas>' +
+            '<div class="pa-c-head">' +
+                '<div class="pa-c-name">' + (about.name || 'la diega') + '</div>' +
+                '<div class="pa-c-role">' + (about.clase || '') + '</div>' +
+            '</div>' +
+            '<div class="pa-c-desk">' + faders + '</div>' +
+            '<button class="pa-c-osc-btn">cambiar a oscilador</button>' +
+        '</div>';
+    }
+};
+
+function openProtoAbout(variant) {
+    const ov = ensureProtoOverlay();
+    if (menuOverlay) menuOverlay.classList.add('hidden');
+    if (aboutOverlay) aboutOverlay.classList.add('hidden');
+    ov.className = 'overlay proto-about proto-' + variant;
+    ov.querySelector('.proto-inner').innerHTML = PROTO_RENDER[variant](DATA.about || {});
+    protoStopOsc();
+    if (variant === 'c') wireProtoC(ov);
+    document.body.classList.add('overlay-open');
+    playSfx('select');
+}
+/* /PROTO ABOUT ============================================== */
 
 function openMenu() {
     clearTimeout(menuOverlay._hideTimer);
