@@ -921,8 +921,8 @@ body.title-flight .ficha {
 
 /* ============================================================
    ABOUT: la ficha-sintetizador. En reposo se ven los stats y la
-   onda decorativa; con .oscillator aparecen el osciloscopio, el
-   volumen, los chips y la pista del teclado.
+   onda decorativa; con .oscillator aparecen el osciloscopio, los
+   dos potes, los modulos con su modal, el volumen y los chips.
    ============================================================ */
 .osc-inner {
     width: min(920px, 92vw);
@@ -934,37 +934,56 @@ body.title-flight .ficha {
 .osc-about:not(.hidden) .osc-inner { animation: oscAboutIn 0.3s ease; }
 @keyframes oscAboutIn { from { opacity: 0; transform: translateY(16px); } }
 
-/* --- mesa de mezclas: onda + faders + volumen --- */
-.oscab { display: flex; flex-direction: column; align-items: center; gap: 22px; }
-.oscab-wave { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
-.oscab-bar { width: 5px; height: 100%; background: var(--highlight); transform-origin: bottom; animation: paCwave 1.1s ease-in-out infinite; }
-@keyframes paCwave { 0%, 100% { transform: scaleY(0.18); } 50% { transform: scaleY(1); } }
+.oscab { display: flex; flex-direction: column; align-items: center; gap: 20px; }
 .oscab-head { text-align: center; }
 .oscab-name { font-size: clamp(48px, 9vw, 96px); line-height: 0.9; color: var(--highlight); text-shadow: 3px 3px 0 #000; }
 .oscab-role { font-size: clamp(18px, 2.6vw, 26px); }
+
+/* onda decorativa (reposo) ↔ osciloscopio en vivo */
+.oscab-wave { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
+.oscab-bar { width: 5px; height: 100%; background: var(--highlight); transform-origin: bottom; animation: oscabWave 1.1s ease-in-out infinite; }
+@keyframes oscabWave { 0%, 100% { transform: scaleY(0.18); } 50% { transform: scaleY(1); } }
+.oscab-scope { display: none; width: min(640px, 88vw); height: 140px; }
+.oscab.oscillator .oscab-wave { display: none; }
+.oscab.oscillator .oscab-scope { display: block; }
+
+/* ficha: los tres stats, solo en reposo */
 .oscab-desk { display: flex; gap: clamp(16px, 4vw, 46px); align-items: flex-end; padding: 10px 0; }
-/* ancho fijo: así las columnas quedan iguales y los faders centrados
-   aunque las etiquetas midan distinto (diseño sonoro vs forma) */
+.oscab.oscillator .oscab-desk { display: none; }
 .oscab-fader { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 96px; }
 .oscab-track { position: relative; width: 10px; height: 180px; background: rgba(255, 255, 255, 0.14); }
-.oscab-fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--highlight); transform-origin: bottom; animation: paCfill 0.5s ease-out; }
-@keyframes paCfill { from { transform: scaleY(0); } }
+.oscab-fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--highlight); transform-origin: bottom; animation: oscabFill 0.5s ease-out; }
+@keyframes oscabFill { from { transform: scaleY(0); } }
 .oscab-knob { position: absolute; left: 50%; width: 30px; height: 14px; background: #fff; transform: translate(-50%, 50%); box-shadow: 0 0 0 3px #000; }
 .oscab-flbl { font-size: 14px; color: var(--dim); text-align: center; line-height: 1.15; }
 
-/* onda decorativa ↔ osciloscopio en vivo (los faders lo controlan) */
-.oscab-scope { display: none; width: min(640px, 88vw); height: 140px; touch-action: none; cursor: crosshair; }
-.oscab.oscillator .oscab-wave { display: none; }
-.oscab.oscillator .oscab-scope { display: block; }
-.oscab-track { cursor: ns-resize; touch-action: none; }
-.oscab-osc-btn {
-    font-size: 22px; color: #000; background: var(--highlight);
-    padding: 6px 20px; transform: rotate(-1deg);
-    box-shadow: 3px 3px 0 #000; transition: transform 0.15s ease;
+/* potenciometros: solo en modo oscilador */
+.oscab-pots { display: none; gap: clamp(30px, 8vw, 80px); }
+.oscab.oscillator .oscab-pots { display: flex; }
+.oscab-pot { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 140px; }
+.oscab-dial {
+    position: relative; width: 74px; height: 74px; border-radius: 50%;
+    background: radial-gradient(circle at 50% 38%, #2a2a2a, #0d0d0d 70%);
+    box-shadow: inset 0 0 0 3px var(--highlight), 0 3px 0 #000;
+    transform: rotate(var(--a, 0deg)); transition: transform 0.12s ease;
+    cursor: ns-resize; touch-action: none;
 }
-.oscab-osc-btn:hover, .oscab-osc-btn:focus-visible { transform: rotate(-2deg) scale(1.06); outline: none; }
+.oscab-tick { position: absolute; left: 50%; top: 7px; width: 4px; height: 24px; background: var(--highlight); transform: translateX(-50%); }
+.oscab-plbl { font-size: 15px; color: var(--dim); }
+.oscab-pval { font-size: 19px; color: var(--highlight); text-align: center; line-height: 1.1; }
 
-/* volumen y canción: sólo existen en modo oscilador */
+/* modulos con modal */
+.oscab-mods { display: none; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.oscab.oscillator .oscab-mods { display: flex; }
+.oscab-mod {
+    font-size: 19px; line-height: 1; padding: 5px 15px 7px;
+    color: var(--text); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.32);
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+.oscab-mod:hover, .oscab-mod:focus-visible { color: var(--highlight); transform: translateY(-2px) rotate(-1.5deg); outline: none; }
+.oscab-mod.on { background: var(--highlight); color: #000; box-shadow: none; clip-path: polygon(0 12%, 97% 0, 100% 90%, 3% 100%); }
+
+/* volumen y cancion: solo en modo oscilador */
 .oscab-vol { display: none; align-items: center; gap: 12px; }
 .oscab.oscillator .oscab-vol { display: flex; }
 .oscab-vbtn {
@@ -976,7 +995,8 @@ body.title-flight .ficha {
 .oscab-vmeter { display: inline-flex; gap: 4px; }
 .oscab-vseg { width: 9px; height: 20px; background: rgba(255, 255, 255, 0.18); }
 .oscab-vseg.on { background: var(--highlight); }
-/* mismo chip que el "sound" del home (aquí .controls no aplica, se repite el look) */
+
+/* mismo chip que el "sound" del home (aqui .controls no aplica, se repite el look) */
 .oscab-chip {
     font-size: 20px; line-height: 1; padding: 2px 14px 4px; margin-left: 8px;
     color: var(--text-window); opacity: 0.45;
@@ -988,12 +1008,59 @@ body.title-flight .ficha {
     clip-path: polygon(0 14%, 96% 0, 100% 88%, 4% 100%);
 }
 .oscab-chip:hover, .oscab-chip:focus-visible { transform: rotate(2.5deg) scale(1.12); outline: none; }
-.oscab-arp { transform: rotate(-2deg); }
-.oscab-arp:hover, .oscab-arp:focus-visible { transform: rotate(-2deg) scale(1.12); }
 
-.oscab-hint {
-    display: none;
-    font-size: 15px; color: var(--dim); text-align: center; letter-spacing: 0.04em;
+.oscab-osc-btn {
+    font-size: 22px; color: #000; background: var(--highlight);
+    padding: 6px 20px; transform: rotate(-1deg);
+    box-shadow: 3px 3px 0 #000; transition: transform 0.15s ease;
 }
-.oscab.oscillator .oscab-hint { display: block; }
+.oscab-osc-btn:hover, .oscab-osc-btn:focus-visible { transform: rotate(-2deg) scale(1.06); outline: none; }
+
+/* ===== Modal de cada modulo ===== */
+.oscab-modal {
+    position: fixed; inset: 0; z-index: 70;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(4, 4, 14, 0.72); padding: 20px;
+}
+.oscab-modal.hidden { display: none; }
+.oscab-modal-box {
+    width: min(420px, 92vw);
+    background: #0b0b16;
+    box-shadow: 0 0 0 3px var(--highlight), 6px 6px 0 rgba(0, 0, 0, 0.7);
+    padding: 14px 18px 18px;
+    animation: oscabModalIn 0.18s ease-out;
+}
+@keyframes oscabModalIn { from { opacity: 0; transform: translateY(12px) scale(0.97); } }
+.oscab-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; color: var(--highlight); font-size: 28px; line-height: 1;
+}
+.oscab-modal-close { font-size: 30px; line-height: 1; padding: 0 6px; color: var(--text); }
+.oscab-modal-close:hover, .oscab-modal-close:focus-visible { color: var(--highlight); outline: none; }
+
+/* envolvente ADSR con las leyendas repartidas debajo, a escala */
+.oscab-adsr { display: block; width: 100%; height: 80px; overflow: visible; }
+.oscab-adsr-line { fill: none; stroke: var(--highlight); stroke-width: 3; vector-effect: non-scaling-stroke; }
+.oscab-adsr-leg { display: flex; margin: 4px 0 14px; font-size: 15px; color: var(--dim); }
+.oscab-adsr-leg span {
+    text-align: center; overflow: hidden; white-space: nowrap;
+    border-top: 2px solid rgba(255, 255, 255, 0.22);
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.22);
+}
+
+.oscab-prow { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.oscab-pname { flex: 0 0 96px; font-size: 17px; color: var(--dim); }
+.oscab-pnum { flex: 0 0 84px; text-align: right; font-size: 17px; color: var(--highlight); }
+.oscab-prange {
+    flex: 1; -webkit-appearance: none; appearance: none;
+    height: 10px; background: rgba(255, 255, 255, 0.16); outline: none;
+}
+.oscab-prange::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 8px; height: 20px; background: var(--highlight); box-shadow: 0 0 0 2px #000;
+}
+.oscab-prange::-moz-range-thumb {
+    width: 8px; height: 20px; border: none; border-radius: 0;
+    background: var(--highlight); box-shadow: 0 0 0 2px #000;
+}
 /* /ABOUT ==================================================== */

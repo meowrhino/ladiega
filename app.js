@@ -79,12 +79,16 @@ function setupSlides() {
         s.video.addEventListener('ended', () => onEnded(s));
         s.video.addEventListener('play', () => {
             updatePlayBtn();
+            syncSongChip();
             if (s.root.classList.contains('contain')) s.bg.play().catch(() => {});
         });
         s.video.addEventListener('pause', () => {
             updatePlayBtn();
+            syncSongChip();
             s.bg.pause();
         });
+        // mute/unmute venga de donde venga: el chip del about se entera
+        s.video.addEventListener('volumechange', syncSongChip);
         return s;
     });
 }
@@ -494,13 +498,540 @@ function buildMenu() {
 
 
 /* ============================================================
-   ABOUT: ficha de la diega que se convierte en un sintetizador.
-   En reposo son stats (musica / diseño sonoro / papeleo); al pulsar
-   "cambiar a oscilador" los mismos faders pasan a ser los controles
-   reales del sonido (nota / timbre / eco) y la onda se puede tocar.
-   El overlay se inyecta desde aquí, no existe en index.html.
+   ABOUT: la ficha de la diega es un sintetizador de verdad.
+   En reposo se ven los stats (musica / diseño sonoro / papeleo).
+   Al pulsar "cambiar a oscilador" aparece el sinte: dos potes
+   (tipo de onda y frecuencia) y cinco modulos que abren su propio
+   modal (ADSR, chorus, flanger, reverb, arpegio), mas el volumen
+   y el chip de la cancion del video.
+   El overlay se inyecta desde aqui, no existe en index.html.
    ============================================================ */
+
+const ABOUT_STATS = [
+    { label: 'musica',        value: 10 },
+    { label: 'diseño sonoro', value: 9  },
+    { label: 'papeleo',       value: 2  }
+];
+
+const WAVES = [
+    { type: 'sine',     label: 'seno' },
+    { type: 'triangle', label: 'triangular' },
+    { type: 'sawtooth', label: 'sierra' },
+    { type: 'square',   label: 'cuadrada' }
+];
+
+// escala pentatonica: caiga donde caiga el pote, siempre suena afinado
+const PENTA = [0, 3, 5, 7, 10];
+function noteHz(step) {
+    const s = Math.max(0, Math.min(10, Math.round(step)));
+    return 110 * Math.pow(2, (PENTA[s % 5] + Math.floor(s / 5) * 12) / 12);
+}
+const NOTA_NOMBRE = ['la', 'do', 're', 'mi', 'sol'];
+function noteLabel(step) {
+    const s = Math.max(0, Math.min(10, Math.round(step)));
+    return NOTA_NOMBRE[s % 5] + (2 + Math.floor(s / 5));
+}
+
+const ARP_PATRONES = [
+    { label: 'subida', pasos: [0, 2, 4, 6] },
+    { label: 'bajada', pasos: [6, 4, 2, 0] },
+    { label: 'vaiven', pasos: [0, 2, 4, 2] },
+    { label: 'salto',  pasos: [0, 4, 1, 5] }
+];
+
+// estado del sinte: lo editan los potes y los modales
+const SYNTH = {
+    wave: 0,
+    note: 10,
+    adsr:    { a: 0.01, d: 0.20, s: 0.55, r: 0.30 },
+    chorus:  { rate: 1.2,  depth: 0.5, mix: 0 },
+    flanger: { rate: 0.35, depth: 0.6, feedback: 0.45, mix: 0 },
+    reverb:  { size: 1.8,  mix: 0 },
+    arp:     { bpm: 300, patron: 0 }
+};
+
+// cada modulo edita su trozo de SYNTH desde un modal
+const MODULES = {
+    adsr: { label: 'ADSR', target: 'adsr', params: [
+        { k: 'a', label: 'attack',  min: 0.001, max: 1.5, paso: 0.001, uds: 's' },
+        { k: 'd', label: 'decay',   min: 0.01,  max: 1.5, paso: 0.01,  uds: 's' },
+        { k: 's', label: 'sustain', min: 0,     max: 1,   paso: 0.01,  uds: '' },
+        { k: 'r', label: 'release', min: 0.01,  max: 2,   paso: 0.01,  uds: 's' }
+    ]},
+    chorus: { label: 'chorus', target: 'chorus', params: [
+        { k: 'rate',  label: 'velocidad',   min: 0.05, max: 6, paso: 0.05, uds: 'Hz' },
+        { k: 'depth', label: 'profundidad', min: 0,    max: 1, paso: 0.01, uds: '' },
+        { k: 'mix',   label: 'mezcla',      min: 0,    max: 1, paso: 0.01, uds: '' }
+    ]},
+    flanger: { label: 'flanger', target: 'flanger', params: [
+        { k: 'rate',     label: 'velocidad',   min: 0.05, max: 4,   paso: 0.05, uds: 'Hz' },
+        { k: 'depth',    label: 'profundidad', min: 0,    max: 1,   paso: 0.01, uds: '' },
+        { k: 'feedback', label: 'realimenta',  min: 0,    max: 0.9, paso: 0.01, uds: '' },
+        { k: 'mix',      label: 'mezcla',      min: 0,    max: 1,   paso: 0.01, uds: '' }
+    ]},
+    reverb: { label: 'reverb', target: 'reverb', params: [
+        { k: 'size', label: 'tamaño', min: 0.2, max: 5, paso: 0.1,  uds: 's' },
+        { k: 'mix',  label: 'mezcla', min: 0,   max: 1, paso: 0.01, uds: '' }
+    ]},
+    arpegio: { label: 'arpegio', target: 'arp', params: [
+        { k: 'bpm',    label: 'velocidad', min: 60, max: 900, paso: 10, uds: 'bpm' },
+        { k: 'patron', label: 'patrón',    min: 0,  max: 3,   paso: 1,  uds: '', lista: ARP_PATRONES }
+    ]}
+};
+
 let oscOverlay = null;
+let oscAudio = null;
+let oscVol = 5;
+let oscAnim = { on: false, raf: null, phase: 0 };
+let oscArp = { on: false, timer: null, i: 0 };
+
+/* ===== Audio ===== */
+
+// impulso sintetico para el reverb: ruido que se apaga
+function makeIR(ctx, segundos) {
+    const rate = ctx.sampleRate;
+    const len = Math.max(1, Math.floor(rate * segundos));
+    const buf = ctx.createBuffer(2, len, rate);
+    for (let c = 0; c < 2; c++) {
+        const d = buf.getChannelData(c);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+    }
+    return buf;
+}
+
+/* cadena: osc → envolvente → seco + chorus + flanger + reverb → bus → master */
+function oscAudioStart() {
+    try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const ctx = audioCtx;
+
+        const master = ctx.createGain();
+        master.gain.value = 0;
+        master.connect(ctx.destination);
+
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        master.connect(analyser);          // el osciloscopio dibuja lo que suena de verdad
+
+        const bus = ctx.createGain();
+        bus.connect(master);
+
+        const osc = ctx.createOscillator();
+        osc.type = WAVES[SYNTH.wave].type;
+        osc.frequency.value = noteHz(SYNTH.note);
+        const env = ctx.createGain();
+        const tone = ctx.createGain();
+        tone.gain.value = 0.16;
+        osc.connect(env); env.connect(tone);
+        osc.start();
+
+        tone.connect(bus);                 // seco
+
+        const chDelay = ctx.createDelay(0.1);
+        chDelay.delayTime.value = 0.026;
+        const chLfo = ctx.createOscillator();
+        chLfo.frequency.value = SYNTH.chorus.rate;
+        const chDepth = ctx.createGain();
+        chLfo.connect(chDepth); chDepth.connect(chDelay.delayTime); chLfo.start();
+        const chWet = ctx.createGain();
+        chWet.gain.value = 0;
+        tone.connect(chDelay); chDelay.connect(chWet); chWet.connect(bus);
+
+        const flDelay = ctx.createDelay(0.05);
+        flDelay.delayTime.value = 0.004;
+        const flLfo = ctx.createOscillator();
+        flLfo.frequency.value = SYNTH.flanger.rate;
+        const flDepth = ctx.createGain();
+        flLfo.connect(flDepth); flDepth.connect(flDelay.delayTime); flLfo.start();
+        const flFb = ctx.createGain();
+        flFb.gain.value = 0;
+        flDelay.connect(flFb); flFb.connect(flDelay);
+        const flWet = ctx.createGain();
+        flWet.gain.value = 0;
+        tone.connect(flDelay); flDelay.connect(flWet); flWet.connect(bus);
+
+        const conv = ctx.createConvolver();
+        conv.buffer = makeIR(ctx, SYNTH.reverb.size);
+        const rvWet = ctx.createGain();
+        rvWet.gain.value = 0;
+        tone.connect(conv); conv.connect(rvWet); rvWet.connect(bus);
+
+        oscAudio = { ctx, osc, env, tone, master, bus, analyser,
+                     chLfo, chDepth, chWet, flLfo, flDepth, flFb, flWet, conv, rvWet };
+        oscAudioApply();
+    } catch (e) { oscAudio = null; }
+}
+
+function oscAudioStop() {
+    oscArpStop();
+    if (!oscAudio) return;
+    try {
+        const t = oscAudio.ctx.currentTime;
+        oscAudio.master.gain.cancelScheduledValues(t);
+        oscAudio.master.gain.setTargetAtTime(0, t, 0.02);
+        oscAudio.osc.stop(t + 0.2);
+        oscAudio.chLfo.stop(t + 0.2);
+        oscAudio.flLfo.stop(t + 0.2);
+    } catch (e) { /* ya parado */ }
+    oscAudio = null;
+}
+
+// vuelca SYNTH y el volumen a los nodos
+function oscAudioApply() {
+    if (!oscAudio) return;
+    const a = oscAudio, t = a.ctx.currentTime, S = SYNTH;
+    a.osc.type = WAVES[S.wave].type;
+    if (!oscArp.on) a.osc.frequency.setTargetAtTime(noteHz(S.note), t, 0.02);
+    a.chLfo.frequency.setTargetAtTime(S.chorus.rate, t, 0.05);
+    a.chDepth.gain.setTargetAtTime(S.chorus.depth * 0.006, t, 0.05);
+    a.chWet.gain.setTargetAtTime(S.chorus.mix, t, 0.05);
+    a.flLfo.frequency.setTargetAtTime(S.flanger.rate, t, 0.05);
+    a.flDepth.gain.setTargetAtTime(S.flanger.depth * 0.003, t, 0.05);
+    a.flFb.gain.setTargetAtTime(S.flanger.feedback * 0.85, t, 0.05);
+    a.flWet.gain.setTargetAtTime(S.flanger.mix, t, 0.05);
+    a.rvWet.gain.setTargetAtTime(S.reverb.mix, t, 0.05);
+    a.master.gain.setTargetAtTime((oscVol / 8) * 0.5, t, 0.03);
+}
+
+function oscReverbRebuild() {
+    if (!oscAudio) return;
+    try { oscAudio.conv.buffer = makeIR(oscAudio.ctx, SYNTH.reverb.size); } catch (e) { /* nada */ }
+}
+
+/* arpegiador: recorre el patron y cada nota pasa por la envolvente ADSR */
+function oscArpStop() {
+    if (oscArp.timer) clearTimeout(oscArp.timer);
+    oscArp.timer = null;
+    oscArp.on = false;
+    if (oscAudio) {
+        const t = oscAudio.ctx.currentTime;
+        oscAudio.env.gain.cancelScheduledValues(t);
+        oscAudio.env.gain.setTargetAtTime(1, t, 0.03);
+    }
+}
+
+function oscArpStart() {
+    oscArp.on = true;
+    oscArp.i = 0;
+    const paso = () => {
+        if (!oscAudio) return;
+        const pat = ARP_PATRONES[SYNTH.arp.patron] || ARP_PATRONES[0];
+        const n = Math.max(0, Math.min(10, SYNTH.note - 4 + pat.pasos[oscArp.i % pat.pasos.length]));
+        const t = oscAudio.ctx.currentTime;
+        const e = SYNTH.adsr;
+        const g = oscAudio.env.gain;
+        oscAudio.osc.frequency.setValueAtTime(noteHz(n), t);
+        g.cancelScheduledValues(t);
+        g.setValueAtTime(0.0015, t);
+        g.exponentialRampToValueAtTime(1, t + e.a);
+        g.exponentialRampToValueAtTime(Math.max(0.0015, e.s), t + e.a + e.d);
+        g.exponentialRampToValueAtTime(0.0015, t + e.a + e.d + e.r);
+        oscArp.i++;
+        oscArp.timer = setTimeout(paso, Math.max(60, 60000 / SYNTH.arp.bpm));
+    };
+    paso();
+}
+
+/* ===== Osciloscopio ===== */
+
+function oscAnimStop() {
+    if (oscAnim.raf) cancelAnimationFrame(oscAnim.raf);
+    oscAnim.raf = null;
+    oscAnim.on = false;
+    oscAudioStop();
+}
+
+function oscAnimStart(ov) {
+    const cv = ov.querySelector('.oscab-scope');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    const amarillo = (getComputedStyle(document.documentElement).getPropertyValue('--highlight') || '#ffe95c').trim();
+    const datos = new Float32Array(2048);
+    const draw = () => {
+        ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = amarillo;
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        if (oscAudio && oscAudio.analyser) {
+            oscAudio.analyser.getFloatTimeDomainData(datos);
+            // enganchar en un cruce por cero para que la onda no baile
+            let ini = 0;
+            for (let i = 1; i < datos.length / 2; i++) {
+                if (datos[i - 1] <= 0 && datos[i] > 0) { ini = i; break; }
+            }
+            const n = Math.floor(datos.length / 2);
+            for (let x = 0; x <= W; x++) {
+                const v = datos[ini + Math.floor((x / W) * n)] || 0;
+                const y = H / 2 - Math.max(-1, Math.min(1, v * 6)) * (H / 2 - 6);
+                x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+        } else {
+            oscAnim.phase += 0.08;
+            for (let x = 0; x <= W; x += 2) {
+                const y = H / 2 - Math.sin((x / W) * Math.PI * 6 + oscAnim.phase) * (H / 2 - 6);
+                x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+        oscAnim.raf = requestAnimationFrame(draw);
+    };
+    draw();
+}
+
+/* ===== Render ===== */
+
+function potAngulo(p) { return -135 + p * 270; }
+
+function renderAbout(about) {
+    let wave = '';
+    for (let i = 0; i < 28; i++) wave += '<span class="oscab-bar" style="animation-delay:' + (i * 55) + 'ms"></span>';
+
+    const stats = ABOUT_STATS.map(st => {
+        const pct = (st.value * 10) + '%';
+        return '<div class="oscab-fader">' +
+            '<span class="oscab-track"><span class="oscab-fill" style="height:' + pct + '"></span>' +
+            '<span class="oscab-knob" style="bottom:' + pct + '"></span></span>' +
+            '<span class="oscab-flbl">' + st.label + '</span></div>';
+    }).join('');
+
+    const pot = (k, label) =>
+        '<div class="oscab-pot" data-p="' + k + '">' +
+            '<span class="oscab-dial"><span class="oscab-tick"></span></span>' +
+            '<span class="oscab-plbl">' + label + '</span>' +
+            '<span class="oscab-pval"></span>' +
+        '</div>';
+
+    const mods = Object.keys(MODULES).map(k =>
+        '<button class="oscab-mod" data-m="' + k + '">' + MODULES[k].label + '</button>').join('');
+
+    let vol = '';
+    for (let i = 0; i < 8; i++) vol += '<span class="oscab-vseg"></span>';
+
+    return '<div class="oscab">' +
+        '<div class="oscab-wave">' + wave + '</div>' +
+        '<canvas class="oscab-scope" width="640" height="140"></canvas>' +
+        '<div class="oscab-head">' +
+            '<div class="oscab-name">' + (about.name || 'la diega') + '</div>' +
+            '<div class="oscab-role">' + (about.clase || '') + '</div>' +
+        '</div>' +
+        '<div class="oscab-desk">' + stats + '</div>' +
+        '<div class="oscab-pots">' + pot('wave', 'tipo de onda') + pot('note', 'frecuencia') + '</div>' +
+        '<div class="oscab-mods">' + mods + '</div>' +
+        '<div class="oscab-vol">' +
+            '<button class="oscab-vbtn" data-d="-1" aria-label="bajar volumen">−</button>' +
+            '<span class="oscab-vmeter">' + vol + '</span>' +
+            '<button class="oscab-vbtn" data-d="1" aria-label="subir volumen">+</button>' +
+            '<button class="oscab-chip oscab-song">canción</button>' +
+        '</div>' +
+        '<button class="oscab-osc-btn">cambiar a oscilador</button>' +
+    '</div>' +
+    '<div class="oscab-modal hidden">' +
+        '<div class="oscab-modal-box">' +
+            '<div class="oscab-modal-head"><span class="oscab-modal-title"></span>' +
+                '<button class="oscab-modal-close" aria-label="cerrar">×</button></div>' +
+            '<div class="oscab-modal-body"></div>' +
+        '</div>' +
+    '</div>';
+}
+
+/* ===== Modales de los modulos ===== */
+
+function fmtParam(p, v) {
+    if (p.lista) return p.lista[Math.round(v)].label;
+    if (p.uds === 'bpm') return Math.round(v) + ' bpm';
+    if (p.uds === 's') return (v < 1 ? Math.round(v * 1000) + ' ms' : v.toFixed(2) + ' s');
+    if (p.uds === 'Hz') return v.toFixed(2) + ' Hz';
+    return Math.round(v * 100) + '%';
+}
+
+// dibuja la envolvente y reparte las leyendas A D S R debajo, a escala
+function pintaAdsr(ov) {
+    const svg = ov.querySelector('.oscab-adsr-line');
+    const leg = ov.querySelector('.oscab-adsr-leg');
+    if (!svg || !leg) return;
+    const e = SYNTH.adsr;
+    const hold = 0.5;
+    const total = e.a + e.d + hold + e.r;
+    const W = 260, H = 80;
+    const xa = (e.a / total) * W;
+    const xd = (e.d / total) * W;
+    const xs = (hold / total) * W;
+    const ys = H - e.s * H;
+    svg.setAttribute('points',
+        '0,' + H + ' ' + xa.toFixed(1) + ',0 ' +
+        (xa + xd).toFixed(1) + ',' + ys.toFixed(1) + ' ' +
+        (xa + xd + xs).toFixed(1) + ',' + ys.toFixed(1) + ' ' + W + ',' + H);
+    const anchos = [e.a, e.d, hold, e.r].map(v => (v / total * 100).toFixed(2) + '%');
+    [...leg.children].forEach((c, i) => { c.style.width = anchos[i]; });
+}
+
+function moduleBody(key) {
+    const m = MODULES[key];
+    const st = SYNTH[m.target];
+    let html = '';
+    if (key === 'adsr') {
+        html += '<svg class="oscab-adsr" viewBox="0 0 260 80" preserveAspectRatio="none">' +
+                '<polyline class="oscab-adsr-line" points=""/></svg>' +
+                '<div class="oscab-adsr-leg"><span>A</span><span>D</span><span>S</span><span>R</span></div>';
+    }
+    html += m.params.map(p =>
+        '<label class="oscab-prow">' +
+            '<span class="oscab-pname">' + p.label + '</span>' +
+            '<input class="oscab-prange" type="range" data-k="' + p.k + '" min="' + p.min +
+                '" max="' + p.max + '" step="' + p.paso + '" value="' + st[p.k] + '">' +
+            '<span class="oscab-pnum">' + fmtParam(p, st[p.k]) + '</span>' +
+        '</label>').join('');
+    return html;
+}
+
+function openModule(ov, key) {
+    const m = MODULES[key];
+    const modal = ov.querySelector('.oscab-modal');
+    modal.querySelector('.oscab-modal-title').textContent = m.label;
+    modal.querySelector('.oscab-modal-body').innerHTML = moduleBody(key);
+    modal.classList.remove('hidden');
+    if (key === 'adsr') pintaAdsr(ov);
+    playSfx('select');
+
+    modal.querySelectorAll('.oscab-prange').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const p = m.params.find(x => x.k === inp.dataset.k);
+            const v = parseFloat(inp.value);
+            SYNTH[m.target][p.k] = v;
+            inp.parentElement.querySelector('.oscab-pnum').textContent = fmtParam(p, v);
+            if (key === 'adsr') pintaAdsr(ov);
+            if (key === 'reverb' && p.k === 'size') oscReverbRebuild();
+            oscAudioApply();
+        });
+    });
+}
+
+function closeModule(ov) {
+    const modal = ov.querySelector('.oscab-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+/* ===== Cableado ===== */
+
+function pintaPotes(ov) {
+    const p = ov.querySelector('.oscab-pot[data-p="wave"]');
+    const n = ov.querySelector('.oscab-pot[data-p="note"]');
+    if (p) {
+        p.querySelector('.oscab-dial').style.setProperty('--a', potAngulo(SYNTH.wave / (WAVES.length - 1)) + 'deg');
+        p.querySelector('.oscab-pval').textContent = WAVES[SYNTH.wave].label;
+    }
+    if (n) {
+        n.querySelector('.oscab-dial').style.setProperty('--a', potAngulo(SYNTH.note / 10) + 'deg');
+        n.querySelector('.oscab-pval').textContent = noteLabel(SYNTH.note) + ' · ' + Math.round(noteHz(SYNTH.note)) + ' Hz';
+    }
+}
+
+// el chip de la cancion siempre refleja lo que suena de verdad
+function syncSongChip() {
+    if (!oscOverlay || oscOverlay.classList.contains('hidden')) return;
+    const chip = oscOverlay.querySelector('.oscab-song');
+    if (chip) chip.classList.toggle('on', !!slides.length && !curSlide().video.muted && !curSlide().video.paused);
+}
+
+function wireAbout(ov) {
+    const root = ov.querySelector('.oscab');
+    const btn = ov.querySelector('.oscab-osc-btn');
+
+    const setLabels = osc => {
+        ov.querySelectorAll('.oscab-flbl').forEach((l, i) => {
+            if (ABOUT_STATS[i]) l.textContent = ABOUT_STATS[i].label;
+        });
+        if (osc) pintaPotes(ov);
+    };
+
+    const paintVol = () => ov.querySelectorAll('.oscab-vseg').forEach((s, i) => s.classList.toggle('on', i < oscVol));
+    paintVol();
+    pintaPotes(ov);
+    syncSongChip();
+
+    btn.addEventListener('click', () => {
+        playSfx('move');
+        if (oscAnim.on) {
+            oscAnimStop();
+            root.classList.remove('oscillator');
+            btn.textContent = 'cambiar a oscilador';
+            closeModule(ov);
+            ov.querySelectorAll('.oscab-mod.on').forEach(b => b.classList.remove('on'));
+        } else {
+            oscAnim.on = true;
+            root.classList.add('oscillator');
+            btn.textContent = 'volver a la onda';
+            setLabels(true);
+            oscAudioStart();
+            oscAnimStart(ov);
+            syncSongChip();
+        }
+    });
+
+    // cada modulo abre su modal; el arpegio ademas arranca/para
+    ov.querySelectorAll('.oscab-mod').forEach(b => {
+        b.addEventListener('click', () => {
+            const key = b.dataset.m;
+            if (key === 'arpegio') {
+                if (oscArp.on) oscArpStop();
+                else if (oscAudio) oscArpStart();
+                b.classList.toggle('on', oscArp.on);
+            }
+            openModule(ov, key);
+        });
+    });
+
+    const modal = ov.querySelector('.oscab-modal');
+    modal.querySelector('.oscab-modal-close').addEventListener('click', () => { playSfx('back'); closeModule(ov); });
+    modal.addEventListener('click', e => { if (e.target === modal) { playSfx('back'); closeModule(ov); } });
+
+    ov.querySelectorAll('.oscab-vbtn').forEach(b => {
+        b.addEventListener('click', () => {
+            oscVol = Math.max(0, Math.min(8, oscVol + (+b.dataset.d)));
+            paintVol();
+            oscAudioApply();
+            playSfx('move');
+        });
+    });
+
+    // mutear / recuperar la cancion del video que suena detras
+    const songBtn = ov.querySelector('.oscab-song');
+    songBtn.addEventListener('click', () => {
+        const v = curSlide().video;
+        const encender = v.muted || v.paused;
+        // el chip manda: applySound() deja los videos y el boton del home coherentes
+        audioUnlocked = true;
+        soundOn = encender;
+        applySound();
+        if (encender && v.paused && mode !== 'gestoria') v.play().catch(() => {});
+        syncSongChip();
+        playSfx('move');
+    });
+
+    // potes: arrastrar arriba/abajo
+    ov.querySelectorAll('.oscab-pot').forEach(p => {
+        const key = p.dataset.p;
+        const max = key === 'wave' ? WAVES.length - 1 : 10;
+        let arrastra = false, y0 = 0, v0 = 0;
+        const dial = p.querySelector('.oscab-dial');
+        dial.addEventListener('pointerdown', e => {
+            arrastra = true; y0 = e.clientY; v0 = SYNTH[key];
+            try { dial.setPointerCapture(e.pointerId); } catch (_) {}
+        });
+        dial.addEventListener('pointermove', e => {
+            if (!arrastra) return;
+            const v = Math.max(0, Math.min(max, Math.round(v0 + (y0 - e.clientY) / 18)));
+            if (v !== SYNTH[key]) { SYNTH[key] = v; pintaPotes(ov); oscAudioApply(); }
+        });
+        dial.addEventListener('pointerup', () => { arrastra = false; });
+        dial.addEventListener('pointercancel', () => { arrastra = false; });
+    });
+}
+
+/* ===== Overlay ===== */
 
 function ensureOscOverlay() {
     if (oscOverlay) return oscOverlay;
@@ -517,14 +1048,10 @@ function ensureOscOverlay() {
         .addEventListener('click', () => { playSfx('back'); closeOscAbout(); });
     document.addEventListener('keydown', e => {
         if (!oscOverlay || oscOverlay.classList.contains('hidden')) return;
-        if (e.key === 'Escape') { closeOscAbout(); return; }
-        // teclado: 7 teclas repartidas por la pentatónica
-        if (!oscAnim.on) return;
-        const i = 'zxcvbnm'.indexOf(e.key.toLowerCase());
-        if (i === -1) return;
-        e.preventDefault();
-        oscSetFader(oscOverlay, 'freq', (i * 10) / 6);
-        oscAudioApply(oscOverlay);
+        if (e.key !== 'Escape') return;
+        const modal = oscOverlay.querySelector('.oscab-modal');
+        if (modal && !modal.classList.contains('hidden')) closeModule(oscOverlay);
+        else closeOscAbout();
     });
     return oscOverlay;
 }
@@ -536,371 +1063,13 @@ function closeOscAbout() {
     document.body.classList.remove('overlay-open');
 }
 
-// parámetros: en reposo son la "ficha", en modo oscilador son los controles reales
-const OSC_PARAMS = [
-    { label: 'musica',        oscLabel: 'nota',  value: 10, osc: 'freq'  },
-    { label: 'diseño sonoro', oscLabel: 'timbre', value: 9, osc: 'shape' },
-    { label: 'papeleo',       oscLabel: 'eco',   value: 2,  osc: 'echo'  }
-];
-
-// oscilador en vivo: la onda de arriba se dibuja a partir de los 3 faders
-let oscAnim = { on: false, raf: null, phase: 0 };
-let oscAudio = null;   // nodos de Web Audio mientras suena
-let oscVol = 5;        // 0..8, volumen del oscilador
-
-// misma curva que dibuja el canvas: tanh(sin) → de seno redondeado a casi cuadrada
-function oscTanhCurve(drive) {
-    const n = 1024, c = new Float32Array(n);
-    for (let i = 0; i < n; i++) c[i] = Math.tanh((-1 + (2 * i) / (n - 1)) * drive);
-    return c;
-}
-
-// escala pentatónica: caiga donde caiga el fader, siempre suena afinado.
-// convierte el cacharro en algo que se puede tocar en vez de una sirena.
-const OSC_PENTA = [0, 3, 5, 7, 10];
-function oscNoteHz(step) {
-    const s = Math.max(0, Math.min(10, Math.round(step)));
-    const semi = OSC_PENTA[s % 5] + Math.floor(s / 5) * 12;
-    return 110 * Math.pow(2, semi / 12);   // de La2 hacia arriba, ~2 octavas
-}
-
-// mueve un fader por código (lo usan el arrastre y la onda tocable)
-function oscSetFader(ov, role, val) {
-    const f = ov.querySelector('.oscab-fader[data-osc="' + role + '"]');
-    if (!f) return;
-    const v = Math.max(0, Math.min(10, Math.round(val)));
-    f.dataset.val = v;
-    const pct = (v * 10) + '%';
-    const fill = f.querySelector('.oscab-fill');
-    fill.style.animation = 'none';
-    fill.style.height = pct;
-    f.querySelector('.oscab-knob').style.bottom = pct;
-}
-
-/* cadena: 2 osciladores (uno desafinado = más gordo) → tanh → filtro → amp
-   → seco + eco realimentado → master. El eco es lo que aporta "papeleo". */
-function oscAudioStart() {
-    try {
-        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const ctx = audioCtx;
-
-        const master = ctx.createGain();
-        master.gain.value = 0;
-        master.connect(ctx.destination);
-
-        const osc = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        osc.type = osc2.type = 'sine';
-        osc2.detune.value = 9;            // coro sutil, quita el pitido plano
-
-        const shaper = ctx.createWaveShaper();
-        shaper.curve = oscTanhCurve(1);
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.Q.value = 6;               // resonancia: el "wah" clásico
-
-        const amp = ctx.createGain();
-        amp.gain.value = 1;               // el arpegiador lo usa de envolvente
-
-        const tone = ctx.createGain();
-        tone.gain.value = 0.16;
-
-        osc.connect(shaper); osc2.connect(shaper);
-        shaper.connect(filter); filter.connect(amp); amp.connect(tone);
-        tone.connect(master);
-        osc.start(); osc2.start();
-
-        // eco con realimentación
-        const delay = ctx.createDelay(1.5);
-        delay.delayTime.value = 0.26;
-        const feedback = ctx.createGain();
-        feedback.gain.value = 0;
-        const wet = ctx.createGain();
-        wet.gain.value = 0;
-        tone.connect(delay);
-        delay.connect(feedback); feedback.connect(delay);
-        delay.connect(wet); wet.connect(master);
-
-        oscAudio = { ctx, osc, osc2, shaper, filter, amp, master, delay, feedback, wet };
-    } catch (e) { oscAudio = null; }
-}
-
-function oscAudioStop() {
-    oscArpStop();
-    if (!oscAudio) return;
-    try {
-        const t = oscAudio.ctx.currentTime;
-        oscAudio.master.gain.cancelScheduledValues(t);
-        oscAudio.master.gain.setTargetAtTime(0, t, 0.02);
-        oscAudio.osc.stop(t + 0.2);
-        oscAudio.osc2.stop(t + 0.2);
-    } catch (e) { /* ya parado */ }
-    oscAudio = null;
-}
-
-function oscGetP(ov, role) {
-    const f = ov.querySelector('.oscab-fader[data-osc="' + role + '"]');
-    return f ? (+f.dataset.val) / 10 : 0.5;
-}
-
-// vuelca los faders (y el volumen) a los nodos de audio
-function oscAudioApply(ov) {
-    if (!oscAudio) return;
-    const t = oscAudio.ctx.currentTime;
-    const shape = oscGetP(ov, 'shape');
-    const echo = oscGetP(ov, 'echo');
-
-    if (!oscArp.on) {
-        const hz = oscNoteHz(oscGetP(ov, 'freq') * 10);
-        oscAudio.osc.frequency.setTargetAtTime(hz, t, 0.02);
-        oscAudio.osc2.frequency.setTargetAtTime(hz, t, 0.02);
-    }
-    // timbre = forma de onda + brillo del filtro, los dos a la vez
-    oscAudio.shaper.curve = oscTanhCurve(1 + shape * 3);
-    oscAudio.filter.frequency.setTargetAtTime(250 * Math.pow(16, shape), t, 0.03);
-    oscAudio.feedback.gain.setTargetAtTime(echo * 0.62, t, 0.03);
-    oscAudio.wet.gain.setTargetAtTime(echo * 0.85, t, 0.03);
-    oscAudio.master.gain.setTargetAtTime((oscVol / 8) * 0.5, t, 0.03);
-}
-
-/* arpegiador: recorre la pentatónica sola y marca el ritmo con la envolvente */
-let oscArp = { on: false, timer: null, i: 0 };
-
-function oscArpStop() {
-    if (oscArp.timer) clearInterval(oscArp.timer);
-    oscArp.timer = null;
-    oscArp.on = false;
-    if (oscAudio) {
-        const t = oscAudio.ctx.currentTime;
-        oscAudio.amp.gain.cancelScheduledValues(t);
-        oscAudio.amp.gain.setTargetAtTime(1, t, 0.03);
-    }
-}
-
-function oscArpStart(ov) {
-    oscArp.on = true;
-    oscArp.i = 0;
-    const patron = [0, 2, 4, 2, 5, 2];
-    const paso = () => {
-        if (!oscAudio) return;
-        const base = +ov.querySelector('.oscab-fader[data-osc="freq"]').dataset.val;
-        const n = Math.max(0, Math.min(10, base - 4 + patron[oscArp.i % patron.length]));
-        const t = oscAudio.ctx.currentTime;
-        const hz = oscNoteHz(n);
-        oscAudio.osc.frequency.setValueAtTime(hz, t);
-        oscAudio.osc2.frequency.setValueAtTime(hz, t);
-        oscAudio.amp.gain.cancelScheduledValues(t);
-        oscAudio.amp.gain.setValueAtTime(0.001, t);
-        oscAudio.amp.gain.exponentialRampToValueAtTime(1, t + 0.012);
-        oscAudio.amp.gain.exponentialRampToValueAtTime(0.02, t + 0.17);
-        oscArp.i++;
-    };
-    paso();
-    oscArp.timer = setInterval(paso, 190);
-}
-
-function oscAnimStop() {
-    if (oscAnim.raf) cancelAnimationFrame(oscAnim.raf);
-    oscAnim.raf = null;
-    oscAnim.on = false;
-    oscAudioStop();
-}
-function oscAnimStart(ov) {
-    const cv = ov.querySelector('.oscab-scope');
-    if (!cv) return;
-    const ctx = cv.getContext('2d');
-    const W = cv.width, H = cv.height;
-    const yellow = (getComputedStyle(document.documentElement).getPropertyValue('--highlight') || '#ffe95c').trim();
-    // una pasada de la onda; el eco se pinta como repeticiones desvaídas detrás
-    const traza = (freq, shape, desfase, alpha, ancho) => {
-        ctx.globalAlpha = alpha;
-        ctx.beginPath();
-        for (let x = 0; x <= W; x += 2) {
-            const theta = (x / W) * freq * Math.PI * 2 + oscAnim.phase - desfase;
-            const v = Math.tanh(Math.sin(theta) * (1 + shape * 3));
-            const y = H / 2 - v * (H / 2 - 6);
-            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
-        ctx.lineWidth = ancho;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-    };
-    const draw = () => {
-        const nota = oscGetP(ov, 'freq');
-        const shape = oscGetP(ov, 'shape');
-        const echo = oscGetP(ov, 'echo');
-        const freq = 1 + nota * 3;          // nº de ciclos visibles
-        oscAnim.phase += 0.05 + nota * 0.06;
-        ctx.clearRect(0, 0, W, H);
-        ctx.strokeStyle = yellow;
-        ctx.lineJoin = 'round';
-        for (let e = 3; e >= 1; e--) {      // las colas del eco, de atrás a delante
-            const a = echo * Math.pow(0.55, e);
-            if (a > 0.02) traza(freq, shape, e * 0.9, a, 2);
-        }
-        traza(freq, shape, 0, 1, 3);
-        oscAnim.raf = requestAnimationFrame(draw);
-    };
-    draw();
-}
-function wireOscAbout(ov) {
-    const btn = ov.querySelector('.oscab-osc-btn');
-    const root = ov.querySelector('.oscab');
-    const songBtn = ov.querySelector('.oscab-song');
-
-    // en modo oscilador los faders enseñan lo que hacen de verdad
-    const setLabels = osc => {
-        ov.querySelectorAll('.oscab-fader').forEach((f, i) => {
-            const p = OSC_PARAMS[i];
-            if (p) f.querySelector('.oscab-flbl').textContent = osc ? p.oscLabel : p.label;
-        });
-    };
-
-    const paintVol = () => {
-        ov.querySelectorAll('.oscab-vseg').forEach((s, i) => s.classList.toggle('on', i < oscVol));
-    };
-    paintVol();
-
-    const syncSong = () => {
-        if (songBtn) songBtn.classList.toggle('on', !curSlide().video.muted);
-    };
-    syncSong();
-
-    if (btn && root) btn.addEventListener('click', () => {
-        playSfx('move');
-        if (oscAnim.on) {
-            oscAnimStop();
-            root.classList.remove('oscillator');
-            btn.textContent = 'cambiar a oscilador';
-            setLabels(false);
-            const a = ov.querySelector('.oscab-arp');
-            if (a) a.classList.remove('on');
-        } else {
-            oscAnim.on = true;
-            root.classList.add('oscillator');
-            btn.textContent = 'volver a la onda';
-            setLabels(true);
-            oscAnimStart(ov);
-            oscAudioStart();
-            oscAudioApply(ov);
-            syncSong();   // el piloto enseña si la canción suena o no, sin tocarla
-        }
-    });
-
-    // arpegiador: toca solo un patrón de la pentatónica
-    const arpBtn = ov.querySelector('.oscab-arp');
-    if (arpBtn) arpBtn.addEventListener('click', () => {
-        playSfx('move');
-        if (oscArp.on) oscArpStop();
-        else if (oscAudio) oscArpStart(ov);
-        arpBtn.classList.toggle('on', oscArp.on);
-    });
-
-    // volumen del oscilador
-    ov.querySelectorAll('.oscab-vbtn').forEach(b => {
-        b.addEventListener('click', () => {
-            oscVol = Math.max(0, Math.min(8, oscVol + (+b.dataset.d)));
-            paintVol();
-            oscAudioApply(ov);
-            playSfx('move');
-        });
-    });
-
-    // mutear / recuperar la canción del vídeo que suena detrás
-    if (songBtn) songBtn.addEventListener('click', () => {
-        const v = curSlide().video;
-        const turnOn = v.muted;
-        if (turnOn) { audioUnlocked = true; soundOn = true; }
-        v.muted = !turnOn;
-        if (turnOn && v.paused && !engaged && mode !== 'gestoria') v.play().catch(() => {});
-        syncSong();
-        playSfx('move');
-    });
-
-    // faders arrastrables: mueven los parámetros del oscilador en vivo
-    ov.querySelectorAll('.oscab-fader').forEach(f => {
-        const track = f.querySelector('.oscab-track');
-        const role = f.dataset.osc;
-        const setFromY = clientY => {
-            const r = track.getBoundingClientRect();
-            const p = Math.max(0, Math.min(1, 1 - (clientY - r.top) / r.height));
-            oscSetFader(ov, role, p * 10);
-            oscAudioApply(ov);
-        };
-        let drag = false;
-        track.addEventListener('pointerdown', e => { drag = true; try { track.setPointerCapture(e.pointerId); } catch (_) {} setFromY(e.clientY); });
-        track.addEventListener('pointermove', e => { if (drag) setFromY(e.clientY); });
-        track.addEventListener('pointerup', () => { drag = false; });
-        track.addEventListener('pointercancel', () => { drag = false; });
-    });
-
-    // la onda se toca: arrastrar por encima cambia nota (x) y forma (y)
-    const scope = ov.querySelector('.oscab-scope');
-    if (scope) {
-        const playAt = (cx, cy) => {
-            const r = scope.getBoundingClientRect();
-            const px = Math.max(0, Math.min(1, (cx - r.left) / r.width));
-            const py = Math.max(0, Math.min(1, 1 - (cy - r.top) / r.height));
-            oscSetFader(ov, 'freq', px * 10);
-            oscSetFader(ov, 'shape', py * 10);
-            oscAudioApply(ov);
-        };
-        let playing = false;
-        scope.addEventListener('pointerdown', e => {
-            playing = true;
-            try { scope.setPointerCapture(e.pointerId); } catch (_) {}
-            playAt(e.clientX, e.clientY);
-        });
-        scope.addEventListener('pointermove', e => { if (playing) playAt(e.clientX, e.clientY); });
-        scope.addEventListener('pointerup', () => { playing = false; });
-        scope.addEventListener('pointercancel', () => { playing = false; });
-    }
-}
-
-// mesa de mezclas: onda arriba (barras en reposo, osciloscopio en vivo) + faders
-function renderOscAbout(about) {
-        let wave = '';
-        for (let i = 0; i < 28; i++) wave += '<span class="oscab-bar" style="animation-delay:' + (i * 55) + 'ms"></span>';
-        const faders = OSC_PARAMS.map(st => {
-            const pct = (st.value * 10) + '%';
-            return '<div class="oscab-fader" data-osc="' + st.osc + '" data-val="' + st.value + '">' +
-                '<span class="oscab-track"><span class="oscab-fill" style="height:' + pct + '"></span>' +
-                '<span class="oscab-knob" style="bottom:' + pct + '"></span></span>' +
-                '<span class="oscab-flbl">' + st.label + '</span>' +
-            '</div>';
-        }).join('');
-        let vol = '';
-        for (let i = 0; i < 8; i++) vol += '<span class="oscab-vseg"></span>';
-        return '<div class="oscab">' +
-            '<div class="oscab-wave">' + wave + '</div>' +
-            '<canvas class="oscab-scope" width="640" height="140"></canvas>' +
-            '<div class="oscab-head">' +
-                '<div class="oscab-name">' + (about.name || 'la diega') + '</div>' +
-                '<div class="oscab-role">' + (about.clase || '') + '</div>' +
-            '</div>' +
-            '<div class="oscab-desk">' + faders + '</div>' +
-            // volumen, arpegiador y chip para mutear la canción del vídeo
-            '<div class="oscab-vol">' +
-                '<button class="oscab-vbtn" data-d="-1" aria-label="bajar volumen">−</button>' +
-                '<span class="oscab-vmeter">' + vol + '</span>' +
-                '<button class="oscab-vbtn" data-d="1" aria-label="subir volumen">+</button>' +
-                '<button class="oscab-chip oscab-arp">arpegio</button>' +
-                '<button class="oscab-chip oscab-song">canción</button>' +
-            '</div>' +
-            '<p class="oscab-hint">arrastra la onda o toca con las teclas Z X C V B N M</p>' +
-            '<button class="oscab-osc-btn">cambiar a oscilador</button>' +
-        '</div>';
-}
-
 function openOscAbout() {
     const ov = ensureOscOverlay();
     if (menuOverlay) menuOverlay.classList.add('hidden');
     ov.className = 'overlay osc-about';
-    ov.querySelector('.osc-inner').innerHTML = renderOscAbout(DATA.about || {});
+    ov.querySelector('.osc-inner').innerHTML = renderAbout(DATA.about || {});
     oscAnimStop();
-    wireOscAbout(ov);
+    wireAbout(ov);
     document.body.classList.add('overlay-open');
     playSfx('select');
 }
