@@ -612,6 +612,28 @@ function protoTanhCurve(drive) {
     return c;
 }
 
+// escala pentatónica: caiga donde caiga el fader, siempre suena afinado.
+// convierte el cacharro en algo que se puede tocar en vez de una sirena.
+const PROTO_PENTA = [0, 3, 5, 7, 10];
+function protoNoteHz(step) {
+    const s = Math.max(0, Math.min(10, Math.round(step)));
+    const semi = PROTO_PENTA[s % 5] + Math.floor(s / 5) * 12;
+    return 110 * Math.pow(2, semi / 12);   // de La2 hacia arriba, ~2 octavas
+}
+
+// mueve un fader por código (lo usan el arrastre y la onda tocable)
+function protoSetFader(ov, role, val) {
+    const f = ov.querySelector('.pa-c-fader[data-osc="' + role + '"]');
+    if (!f) return;
+    const v = Math.max(0, Math.min(10, Math.round(val)));
+    f.dataset.val = v;
+    const pct = (v * 10) + '%';
+    const fill = f.querySelector('.pa-c-fill');
+    fill.style.animation = 'none';
+    fill.style.height = pct;
+    f.querySelector('.pa-c-knob').style.bottom = pct;
+}
+
 function protoAudioStart() {
     try {
         audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -666,7 +688,7 @@ function protoAudioApply(ov) {
         return f ? (+f.dataset.val) / 10 : 0.5;
     };
     const t = protoAudio.ctx.currentTime;
-    protoAudio.osc.frequency.setTargetAtTime(80 + getP('freq') * 520, t, 0.03);
+    protoAudio.osc.frequency.setTargetAtTime(protoNoteHz(getP('freq') * 10), t, 0.02);
     protoAudio.shaper.curve = protoTanhCurve(1 + getP('shape') * 3);
     protoAudio.noiseGain.gain.setTargetAtTime(getP('noise') * 0.10, t, 0.03);
     protoAudio.master.gain.setTargetAtTime((protoVol / 8) * 0.5, t, 0.03);
@@ -745,9 +767,7 @@ function wireProtoC(ov) {
             protoStartOsc(ov);
             protoAudioStart();
             protoAudioApply(ov);
-            // baja la canción del vídeo para que se oiga el oscilador
-            curSlide().video.muted = true;
-            syncSong();
+            syncSong();   // el piloto enseña si la canción suena o no, sin tocarla
         }
     });
 
@@ -775,18 +795,11 @@ function wireProtoC(ov) {
     // faders arrastrables: mueven los parámetros del oscilador en vivo
     ov.querySelectorAll('.pa-c-fader').forEach(f => {
         const track = f.querySelector('.pa-c-track');
-        const fill = f.querySelector('.pa-c-fill');
-        const knob = f.querySelector('.pa-c-knob');
+        const role = f.dataset.osc;
         const setFromY = clientY => {
             const r = track.getBoundingClientRect();
-            let p = 1 - (clientY - r.top) / r.height;
-            p = Math.max(0, Math.min(1, p));
-            const val = Math.round(p * 10);
-            f.dataset.val = val;
-            const pct = (val * 10) + '%';
-            fill.style.animation = 'none';
-            fill.style.height = pct;
-            knob.style.bottom = pct;
+            const p = Math.max(0, Math.min(1, 1 - (clientY - r.top) / r.height));
+            protoSetFader(ov, role, p * 10);
             protoAudioApply(ov);
         };
         let drag = false;
@@ -795,6 +808,28 @@ function wireProtoC(ov) {
         track.addEventListener('pointerup', () => { drag = false; });
         track.addEventListener('pointercancel', () => { drag = false; });
     });
+
+    // la onda se toca: arrastrar por encima cambia nota (x) y forma (y)
+    const scope = ov.querySelector('.pa-c-scope');
+    if (scope) {
+        const playAt = (cx, cy) => {
+            const r = scope.getBoundingClientRect();
+            const px = Math.max(0, Math.min(1, (cx - r.left) / r.width));
+            const py = Math.max(0, Math.min(1, 1 - (cy - r.top) / r.height));
+            protoSetFader(ov, 'freq', px * 10);
+            protoSetFader(ov, 'shape', py * 10);
+            protoAudioApply(ov);
+        };
+        let playing = false;
+        scope.addEventListener('pointerdown', e => {
+            playing = true;
+            try { scope.setPointerCapture(e.pointerId); } catch (_) {}
+            playAt(e.clientX, e.clientY);
+        });
+        scope.addEventListener('pointermove', e => { if (playing) playAt(e.clientX, e.clientY); });
+        scope.addEventListener('pointerup', () => { playing = false; });
+        scope.addEventListener('pointercancel', () => { playing = false; });
+    }
 }
 
 const PROTO_RENDER = {
