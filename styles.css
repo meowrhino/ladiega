@@ -543,7 +543,7 @@ body.title-flight .play-big {
     display: none;
 }
 
-/* barra de vida: celditas que se van llenando (--p la pone el JS) */
+/* barra de vida: se va llenando de amarillo (--p la pone el JS) */
 #seekBar {
     --base: translateX(-50%) rotate(-0.6deg);
     left: 50%;
@@ -552,13 +552,9 @@ body.title-flight .play-big {
     -webkit-appearance: none;
     appearance: none;
     height: 14px;
-    background:
-        repeating-linear-gradient(90deg,
-            transparent 0 15px,
-            rgba(4, 4, 16, 0.9) 15px 18px),
-        linear-gradient(90deg,
-            var(--highlight) 0 var(--p, 0%),
-            rgba(216, 219, 255, 0.18) var(--p, 0%) 100%);
+    background: linear-gradient(90deg,
+        var(--highlight) 0 var(--p, 0%),
+        rgba(216, 219, 255, 0.18) var(--p, 0%) 100%);
     box-shadow: 0 0 0 2px rgba(4, 4, 16, 0.75);
     outline: none;
 }

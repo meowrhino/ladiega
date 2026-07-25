@@ -7,7 +7,8 @@ let playlist = [];      // lista que alimenta el carrusel actual
 let index = 0;
 let mode = 'home';      // 'home' | 'category' | 'single' | 'gestoria'
 let auto = true;        // avanzar solo al terminar cada video
-let soundOn = true;     // sonido encendido por defecto (si el navegador lo bloquea, arranca al primer gesto)
+let soundOn = true;     // intención: el usuario quiere sonido (el navegador lo bloquea hasta el primer gesto)
+let audioUnlocked = false; // ¿ya hubo un gesto que permita audio? (política de autoplay del navegador)
 let engaged = false;    // el usuario ha tocado este video → se ignora el bucle start/finish
 let transitioning = false;
 let seeking = false;
@@ -95,10 +96,19 @@ function curSlide() {
     return slides[cur];
 }
 
-// intenta reproducir; si el navegador bloquea el autoplay con sonido,
-// arranca en silencio y el primer gesto del usuario lo activa
+// ¿debe sonar ahora mismo? sólo si el usuario quiere sonido Y ya hubo un gesto
+function isAudible() { return soundOn && audioUnlocked; }
+
+// refleja el estado real del sonido en los vídeos y en el botón (que así deja de mentir)
+function applySound() {
+    const on = isAudible();
+    slides.forEach(s => { s.video.muted = !on; });
+    if (soundBtn) soundBtn.classList.toggle('on', on);
+}
+
+// intenta reproducir; arranca en silencio hasta que un gesto desbloquea el audio
 function tryPlay(s) {
-    s.video.muted = !soundOn;
+    s.video.muted = !isAudible();
     s.video.play().catch(() => {
         s.video.muted = true;
         s.video.play().catch(() => {
@@ -196,7 +206,7 @@ function showVideo(project, dir = 1, instant = false) {
     incoming.bg.removeAttribute('src');
     incoming.bg.load();
     incoming.video.src = project.videoPath;
-    incoming.video.muted = !soundOn;
+    incoming.video.muted = !isAudible();
     incoming.video.load();
 
     const begin = () => {
@@ -618,11 +628,26 @@ function scatterVars(el, prefix) {
     el.style.setProperty('--' + prefix + 'r', Math.round(Math.random() * 30 - 15) + 'deg');
 }
 
+// las flechas grandes siempre entran y salen por su propio lado (menos lio);
+// el resto de controles, desde donde les toque en el sorteo
+function setCtrlVars(prefix) {
+    controls.querySelectorAll('.ctrl').forEach(el => {
+        if (el.classList.contains('edge-arrow')) {
+            const left = el.classList.contains('left');
+            el.style.setProperty('--' + prefix + 'x', (left ? -140 : 140) + 'px');
+            el.style.setProperty('--' + prefix + 'y', '0px');
+            el.style.setProperty('--' + prefix + 'r', (left ? -10 : 10) + 'deg');
+        } else {
+            scatterVars(el, prefix);
+        }
+    });
+}
+
 function showControls() {
     if (mode === 'gestoria') return;
     document.body.classList.add('booted');
     if (controls.classList.contains('faded')) {
-        controls.querySelectorAll('.ctrl').forEach(el => scatterVars(el, 'i'));
+        setCtrlVars('i');
         controls.classList.remove('faded');
         document.body.classList.add('controls-open');
     }
@@ -634,7 +659,7 @@ function showControls() {
 
 function hideControls() {
     if (controls.classList.contains('faded')) return;
-    controls.querySelectorAll('.ctrl').forEach(el => scatterVars(el, 'o'));
+    setCtrlVars('o');
     controls.classList.add('faded');
     document.body.classList.remove('controls-open');
 }
@@ -690,10 +715,13 @@ function bindUI() {
     });
 
     soundBtn.addEventListener('click', () => {
-        soundOn = !soundOn;
+        // primer gesto sobre el botón: desbloquea y enciende (no alterna, si no se apagaría al instante)
+        if (!audioUnlocked) { audioUnlocked = true; soundOn = true; }
+        else soundOn = !soundOn;
+        applySound();
         playSfx('move');
-        slides.forEach(s => { s.video.muted = !soundOn; });
-        soundBtn.classList.toggle('on', soundOn);
+        const v = curSlide().video;
+        if (soundOn && v.paused && !engaged && mode !== 'gestoria') v.play().catch(() => {});
     });
 
     seekBar.addEventListener('input', () => {
@@ -741,14 +769,21 @@ function bindUI() {
 
     window.addEventListener('resize', () => slides.forEach(fitSlide));
 
-    // si el navegador bloqueo el autoplay inicial (o el sonido), la primera interaccion lo arranca
-    const resume = () => {
+    // política de autoplay: el audio no puede sonar hasta el primer gesto del usuario.
+    // el primer gesto EN CUALQUIER PARTE desbloquea y enciende el sonido; si el gesto es
+    // sobre el botón de sonido, lo gestiona su propio handler (para no apagarlo al instante).
+    const unlock = (e) => {
+        if (audioUnlocked) return;
+        if (e && e.target && e.target.closest && e.target.closest('#soundBtn')) return;
+        audioUnlocked = true;
+        applySound();
         const v = curSlide().video;
-        if (soundOn) v.muted = false;
         if (v.paused && !engaged && mode !== 'gestoria') v.play().catch(() => {});
+        document.removeEventListener('pointerdown', unlock);
+        document.removeEventListener('keydown', unlock);
     };
-    document.addEventListener('pointerdown', resume, { once: true });
-    document.addEventListener('keydown', resume, { once: true });
+    document.addEventListener('pointerdown', unlock);
+    document.addEventListener('keydown', unlock);
 
     // el navegador pausa los videos al ocultar la pestaña: reanudar al volver
     document.addEventListener('visibilitychange', () => {
