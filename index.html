@@ -5,11 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>la diega</title>
     <meta name="description" content="la diega — music, sound design & sfx">
+    <meta property="og:title" content="la diega">
+    <meta property="og:description" content="music, sound design & sfx">
+    <meta property="og:type" content="website">
     <link rel="icon" type="image/png" href="data/navicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="about.css">
+    <!-- iconos que solo aparecen al hacer hover: precargados para que no parpadeen -->
+    <link rel="preload" as="image" href="data/icons/arrow-left-hi.svg">
+    <link rel="preload" as="image" href="data/icons/arrow-right-hi.svg">
+    <link rel="preload" as="image" href="data/icons/hand-point.svg">
 </head>
 <body>
     <!-- Carrusel: dos slides que se alternan para el desplazamiento -->
@@ -48,7 +56,7 @@
         <button id="playBtn" class="ctrl play-big">pause</button>
         <input id="seekBar" class="ctrl" type="range" min="0" max="1000" value="0" aria-label="progreso">
         <button id="autoBtn" class="ctrl toggle on" aria-label="avance automático">auto</button>
-        <button id="soundBtn" class="ctrl toggle" aria-label="sonido">sound</button>
+        <button id="soundBtn" class="ctrl toggle on" aria-label="sonido">sound</button>
         <button id="arrowPrev" class="ctrl edge-arrow left" aria-label="video anterior"></button>
         <button id="arrowNext" class="ctrl edge-arrow right" aria-label="video siguiente"></button>
     </div>
@@ -59,6 +67,6 @@
         <nav id="menuNav" class="menu-nav" aria-label="menú principal"></nav>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

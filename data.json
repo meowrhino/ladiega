@@ -146,7 +146,7 @@
     "title": "about",
     "name": "la diega",
     "clase": "compositora · diseñadora sonora",
-    "_nota": "el about es la ficha-sintetizador; los faders (musica / diseño sonoro / papeleo) se editan en OSC_PARAMS dentro de app.js"
+    "_nota": "el about es la ficha-sintetizador; los faders (musica / diseño sonoro / papeleo) se editan en ABOUT_STATS dentro de js/about.js"
   },
   "gestoria": {
     "label": "gestoría",
