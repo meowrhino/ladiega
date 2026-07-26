@@ -1,10 +1,10 @@
 // la diega — ABOUT: la ficha de la diega es un sintetizador de verdad.
 // En reposo se ven los stats (musica / diseño sonoro / papeleo). Al pulsar
 // "cambiar a oscilador" aparece el sinte: tres potes (onda, frecuencia,
-// filtro), cinco modulos con su modal (ADSR con boton de tocar; chorus,
-// flanger, reverb y arpegio con su ON/OFF), el volumen y el chip de la
-// cancion del video. Se toca con las teclas A–L, arrastrando la onda
-// (theremin) o manteniendo la barra espaciadora.
+// filtro), cinco modulos con su modal (voces con detune; chorus, flanger,
+// reverb y arpegio — con ataque — con su ON/OFF), el volumen, el chip
+// "drone" y el de la cancion del video. Se toca con las teclas A–L,
+// arrastrando la onda (theremin) o manteniendo la barra espaciadora.
 // El overlay se inyecta desde aqui, no existe en index.html.
 // El motor de audio vive en synth.js.
 
@@ -21,32 +21,35 @@ const ABOUT_STATS = [
 
 // cada modulo edita su trozo de SYNTH desde un modal
 const MODULES = {
-    adsr: { label: 'ADSR', target: 'adsr', params: [
-        { k: 'a', label: 'attack',  min: 0.001, max: 1.5, paso: 0.001, uds: 's' },
-        { k: 'd', label: 'decay',   min: 0.01,  max: 1.5, paso: 0.01,  uds: 's' },
-        { k: 's', label: 'sustain', min: 0,     max: 1,   paso: 0.01,  uds: '' },
-        { k: 'r', label: 'release', min: 0.01,  max: 2,   paso: 0.01,  uds: 's' }
+    voces: { label: 'voces', target: 'voices', params: [
+        { k: 'n',      label: 'voces',  min: 1, max: 5,  paso: 1, uds: 'n'  },
+        { k: 'detune', label: 'detune', min: 0, max: 50, paso: 1, uds: 'ct' }
     ]},
     chorus: { label: 'chorus', target: 'chorus', params: [
-        { k: 'rate',  label: 'velocidad',   min: 0.05, max: 6, paso: 0.05, uds: 'Hz' },
-        { k: 'depth', label: 'profundidad', min: 0,    max: 1, paso: 0.01, uds: '' },
-        { k: 'mix',   label: 'mezcla',      min: 0,    max: 1, paso: 0.01, uds: '' }
+        { k: 'rate',  label: 'Hz',      min: 0.05, max: 6, paso: 0.05, uds: 'Hz' },
+        { k: 'depth', label: 'depth',   min: 0,    max: 1, paso: 0.01, uds: '' },
+        { k: 'mix',   label: 'dry/wet', min: 0,    max: 1, paso: 0.01, uds: '' }
     ]},
     flanger: { label: 'flanger', target: 'flanger', params: [
-        { k: 'rate',     label: 'velocidad',   min: 0.05, max: 4,   paso: 0.05, uds: 'Hz' },
-        { k: 'depth',    label: 'profundidad', min: 0,    max: 1,   paso: 0.01, uds: '' },
-        { k: 'feedback', label: 'realimenta',  min: 0,    max: 0.9, paso: 0.01, uds: '' },
-        { k: 'mix',      label: 'mezcla',      min: 0,    max: 1,   paso: 0.01, uds: '' }
+        { k: 'rate',     label: 'Hz',       min: 0.05, max: 4,   paso: 0.05, uds: 'Hz' },
+        { k: 'depth',    label: 'depth',    min: 0,    max: 1,   paso: 0.01, uds: '' },
+        { k: 'feedback', label: 'feedback', min: 0,    max: 0.9, paso: 0.01, uds: '' },
+        { k: 'mix',      label: 'dry/wet',  min: 0,    max: 1,   paso: 0.01, uds: '' }
     ]},
     reverb: { label: 'reverb', target: 'reverb', params: [
-        { k: 'size', label: 'tamaño', min: 0.2, max: 5, paso: 0.1,  uds: 's' },
-        { k: 'mix',  label: 'mezcla', min: 0,   max: 1, paso: 0.01, uds: '' }
+        { k: 'time',     label: 'time',      min: 0.2, max: 5,   paso: 0.1,  uds: 's' },
+        { k: 'predelay', label: 'pre-delay', min: 0,   max: 200, paso: 5,    uds: 'ms' },
+        { k: 'mix',      label: 'dry/wet',   min: 0,   max: 1,   paso: 0.01, uds: '' }
     ]},
     arpegio: { label: 'arpegio', target: 'arp', params: [
-        { k: 'bpm',    label: 'velocidad', min: 60, max: 900, paso: 10, uds: 'bpm' },
-        { k: 'patron', label: 'patrón',    min: 0,  max: 3,   paso: 1,  uds: '', lista: ARP_PATRONES }
+        { k: 'bpm',    label: 'velocidad', min: 60,    max: 900, paso: 10,    uds: 'bpm' },
+        { k: 'patron', label: 'patrón',    min: 0,     max: 3,   paso: 1,     uds: '', lista: ARP_PATRONES },
+        { k: 'attack', label: 'ataque',    min: 0.001, max: 0.5, paso: 0.001, uds: 's' }
     ]}
 };
+
+// modulos que no son efectos: sin interruptor ON/OFF en su modal
+const SIN_TOGGLE = { voces: true };
 
 let aboutData = {};
 let oscOverlay = null;
@@ -175,59 +178,33 @@ function renderAbout(about) {
 function fmtParam(p, v) {
     if (p.lista) return p.lista[Math.round(v)].label;
     if (p.uds === 'bpm') return Math.round(v) + ' bpm';
+    if (p.uds === 'n') return String(Math.round(v));
+    if (p.uds === 'ct') return Math.round(v) + ' ct';
+    if (p.uds === 'ms') return Math.round(v) + ' ms';
     if (p.uds === 's') return (v < 1 ? Math.round(v * 1000) + ' ms' : v.toFixed(2) + ' s');
     if (p.uds === 'Hz') return v.toFixed(2) + ' Hz';
     return Math.round(v * 100) + '%';
 }
 
-// dibuja la envolvente y reparte las leyendas A D S R debajo, a escala
-function pintaAdsr(ov) {
-    const svg = ov.querySelector('.oscab-adsr-line');
-    const leg = ov.querySelector('.oscab-adsr-leg');
-    if (!svg || !leg) return;
-    const e = SYNTH.adsr;
-    const hold = 0.5;
-    const total = e.a + e.d + hold + e.r;
-    const W = 260, H = 80;
-    const xa = (e.a / total) * W;
-    const xd = (e.d / total) * W;
-    const xs = (hold / total) * W;
-    const ys = H - e.s * H;
-    svg.setAttribute('points',
-        '0,' + H + ' ' + xa.toFixed(1) + ',0 ' +
-        (xa + xd).toFixed(1) + ',' + ys.toFixed(1) + ' ' +
-        (xa + xd + xs).toFixed(1) + ',' + ys.toFixed(1) + ' ' + W + ',' + H);
-    const anchos = [e.a, e.d, hold, e.r].map(v => (v / total * 100).toFixed(2) + '%');
-    [...leg.children].forEach((c, i) => { c.style.width = anchos[i]; });
-}
-
 function moduleBody(key) {
     const m = MODULES[key];
     const st = SYNTH[m.target];
-    let html = '';
-    if (key === 'adsr') {
-        html += '<svg class="oscab-adsr" viewBox="0 0 260 80" preserveAspectRatio="none">' +
-                '<polyline class="oscab-adsr-line" points=""/></svg>' +
-                '<div class="oscab-adsr-leg"><span>A</span><span>D</span><span>S</span><span>R</span></div>';
-    }
-    html += m.params.map(p =>
+    return m.params.map(p =>
         '<label class="oscab-prow">' +
             '<span class="oscab-pname">' + p.label + '</span>' +
             '<input class="oscab-prange" type="range" data-k="' + p.k + '" min="' + p.min +
                 '" max="' + p.max + '" step="' + p.paso + '" value="' + st[p.k] + '">' +
             '<span class="oscab-pnum">' + fmtParam(p, st[p.k]) + '</span>' +
         '</label>').join('');
-    // boton para disparar la envolvente: mantener pulsado = mantener la nota
-    if (key === 'adsr') html += '<button class="oscab-touch">tocar</button>';
-    return html;
 }
 
-// los botones de la parrilla se encienden con su efecto (el ADSR nunca: no se apaga)
+// los botones de la parrilla se encienden con su efecto
+// (las voces cuentan como "puestas" en cuanto hay mas de una)
 function refreshMods(ov) {
     ov.querySelectorAll('.oscab-mod').forEach(b => {
         const k = b.dataset.m;
         const on = oscAnim.on && (k === 'arpegio' ? synth.isArpOn()
-                 : k === 'adsr' ? false : !!SYNTH[MODULES[k].target].on);
+                 : k === 'voces' ? SYNTH.voices.n > 1 : !!SYNTH[MODULES[k].target].on);
         b.classList.toggle('on', on);
     });
 }
@@ -240,7 +217,7 @@ function openModule(ov, key) {
 
     // ON/OFF en la cabecera: asi se sabe si el efecto se esta aplicando
     const tgl = modal.querySelector('.oscab-modal-onoff');
-    if (key === 'adsr') {
+    if (SIN_TOGGLE[key]) {
         tgl.classList.add('hidden');
     } else {
         const pintaTgl = () => {
@@ -263,16 +240,6 @@ function openModule(ov, key) {
     }
 
     modal.classList.remove('hidden');
-    if (key === 'adsr') {
-        pintaAdsr(ov);
-        const tocar = modal.querySelector('.oscab-touch');
-        let pulsado = false;
-        tocar.addEventListener('pointerdown', () => { pulsado = true; synth.envTrigger(); });
-        const suelta = () => { if (pulsado) { pulsado = false; synth.envRelease(); } };
-        tocar.addEventListener('pointerup', suelta);
-        tocar.addEventListener('pointercancel', suelta);
-        tocar.addEventListener('pointerleave', suelta);
-    }
     playSfx('select');
 
     modal.querySelectorAll('.oscab-prange').forEach(inp => {
@@ -281,8 +248,8 @@ function openModule(ov, key) {
             const v = parseFloat(inp.value);
             SYNTH[m.target][p.k] = v;
             inp.parentElement.querySelector('.oscab-pnum').textContent = fmtParam(p, v);
-            if (key === 'adsr') pintaAdsr(ov);
-            if (key === 'reverb' && p.k === 'size') synth.rebuildReverb();
+            if (key === 'reverb' && p.k === 'time') synth.rebuildReverb();
+            if (key === 'voces') refreshMods(ov);
             synth.applyParams();
         });
     });

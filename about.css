@@ -144,27 +144,6 @@
 }
 .oscab-modal-onoff.hidden { display: none; }
 
-/* boton "tocar" del ADSR: mantener pulsado = mantener la nota */
-.oscab-touch {
-    display: block; margin: 6px auto 0;
-    font-size: 20px; padding: 6px 26px 8px;
-    background: var(--highlight); color: #000;
-    box-shadow: 3px 3px 0 #000; transform: rotate(-1deg);
-    transition: transform 0.1s ease;
-    touch-action: none; user-select: none; -webkit-user-select: none;
-}
-.oscab-touch:active { transform: rotate(-1deg) scale(0.94); }
-
-/* envolvente ADSR con las leyendas repartidas debajo, a escala */
-.oscab-adsr { display: block; width: 100%; height: 80px; overflow: visible; }
-.oscab-adsr-line { fill: none; stroke: var(--highlight); stroke-width: 3; vector-effect: non-scaling-stroke; }
-.oscab-adsr-leg { display: flex; margin: 4px 0 14px; font-size: 15px; color: var(--dim); }
-.oscab-adsr-leg span {
-    text-align: center; overflow: hidden; white-space: nowrap;
-    border-top: 2px solid rgba(255, 255, 255, 0.22);
-    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.22);
-}
-
 .oscab-prow { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
 .oscab-pname { flex: 0 0 96px; font-size: 17px; color: var(--dim); }
 .oscab-pnum { flex: 0 0 84px; text-align: right; font-size: 17px; color: var(--highlight); }

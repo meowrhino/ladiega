@@ -1,5 +1,6 @@
 // la diega — motor del sintetizador del about: estado, cadena de audio,
-// notas con envolvente ADSR, arpegiador y efectos. La interfaz vive en about.js.
+// notas con envolvente, voces con detune, arpegiador y efectos.
+// La interfaz vive en about.js.
 
 import { getAudioCtx } from './audio.js';
 
@@ -38,17 +39,20 @@ export const ARP_PATRONES = [
     { label: 'salto',  pasos: [0, 4, 1, 5] }
 ];
 
+const MAX_VOICES = 5;
+const RELEASE = 0.3;   // release fijo al soltar una nota (el ataque si es editable)
+
 // estado del sinte: lo editan los potes y los modales; persiste entre visitas al about
 export const SYNTH = {
     wave: 0,
     note: 10,
     filter: 10,
-    drone: true,   // true = siempre sonando · false = solo al tocar (ADSR / arpegio)
-    adsr:    { a: 0.01, d: 0.20, s: 0.55, r: 0.30 },
+    drone: true,   // true = siempre sonando · false = solo al tocar (teclas / arpegio)
+    voices:  { n: 1, detune: 10 },
     chorus:  { on: false, rate: 1.2,  depth: 0.5, mix: 0.4 },
     flanger: { on: false, rate: 0.35, depth: 0.6, feedback: 0.45, mix: 0.4 },
-    reverb:  { on: true,  size: 1.8,  mix: 0.25 },
-    arp:     { bpm: 300, patron: 0 }
+    reverb:  { on: true,  time: 1.8,  predelay: 20, mix: 0.25 },
+    arp:     { bpm: 300, patron: 0, attack: 0.01 }
 };
 
 let engine = null;
@@ -66,19 +70,27 @@ export function setVolume(v) {
     applyParams();
 }
 
-// impulso sintetico para el reverb: ruido que se apaga
+// impulso sintetico para el reverb: ruido que se apaga, con la energia
+// normalizada para que el 100% wet suene presente sea cual sea el tiempo
 function makeIR(ctx, segundos) {
     const rate = ctx.sampleRate;
     const len = Math.max(1, Math.floor(rate * segundos));
     const buf = ctx.createBuffer(2, len, rate);
     for (let c = 0; c < 2; c++) {
         const d = buf.getChannelData(c);
-        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+        let energia = 0;
+        for (let i = 0; i < len; i++) {
+            d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+            energia += d[i] * d[i];
+        }
+        const esc = 1 / Math.sqrt(Math.max(energia, 1e-6));
+        for (let i = 0; i < len; i++) d[i] *= esc;
     }
     return buf;
 }
 
-/* cadena: osc → envolvente → filtro → seco + chorus + flanger + reverb → bus → master */
+/* cadena: voces (osc × 5, detune y pan) → envolvente → filtro → tono
+   → mezcla (seco + chorus + flanger) → reverb (crossfade dry/wet) → master */
 export function startEngine() {
     try {
         const ctx = getAudioCtx();
@@ -91,12 +103,6 @@ export function startEngine() {
         analyser.fftSize = 2048;
         master.connect(analyser);          // el osciloscopio dibuja lo que suena de verdad
 
-        const bus = ctx.createGain();
-        bus.connect(master);
-
-        const osc = ctx.createOscillator();
-        osc.type = WAVES[SYNTH.wave].type;
-        osc.frequency.value = noteHz(SYNTH.note);
         const env = ctx.createGain();
         env.gain.value = 0.0015;           // en silencio hasta la primera nota
         const filt = ctx.createBiquadFilter();
@@ -104,10 +110,28 @@ export function startEngine() {
         filt.Q.value = 2.5;
         const tone = ctx.createGain();
         tone.gain.value = 0.16;
-        osc.connect(env); env.connect(filt); filt.connect(tone);
-        osc.start();
+        env.connect(filt); filt.connect(tone);
 
-        tone.connect(bus);                 // seco
+        // voces: cinco osciladores fijos; el numero activo y el detune se
+        // gobiernan por ganancia (asi cambiar de voces no corta el sonido)
+        const voices = [];
+        for (let i = 0; i < MAX_VOICES; i++) {
+            const o = ctx.createOscillator();
+            o.type = WAVES[SYNTH.wave].type;
+            o.frequency.value = noteHz(SYNTH.note);
+            const vg = ctx.createGain();
+            vg.gain.value = 0;
+            const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+            o.connect(vg);
+            if (pan) { vg.connect(pan); pan.connect(env); }
+            else vg.connect(env);
+            o.start();
+            voices.push({ o, vg, pan });
+        }
+
+        // mezcla previa a la reverb: seco + chorus + flanger
+        const mixBus = ctx.createGain();
+        tone.connect(mixBus);
 
         const chDelay = ctx.createDelay(0.1);
         chDelay.delayTime.value = 0.026;
@@ -117,7 +141,7 @@ export function startEngine() {
         chLfo.connect(chDepth); chDepth.connect(chDelay.delayTime); chLfo.start();
         const chWet = ctx.createGain();
         chWet.gain.value = 0;
-        tone.connect(chDelay); chDelay.connect(chWet); chWet.connect(bus);
+        tone.connect(chDelay); chDelay.connect(chWet); chWet.connect(mixBus);
 
         const flDelay = ctx.createDelay(0.05);
         flDelay.delayTime.value = 0.004;
@@ -130,16 +154,23 @@ export function startEngine() {
         flDelay.connect(flFb); flFb.connect(flDelay);
         const flWet = ctx.createGain();
         flWet.gain.value = 0;
-        tone.connect(flDelay); flDelay.connect(flWet); flWet.connect(bus);
+        tone.connect(flDelay); flDelay.connect(flWet); flWet.connect(mixBus);
 
+        // etapa final de reverb: crossfade de señal limpia a solo reverb
+        const rvDry = ctx.createGain();
+        rvDry.gain.value = 1;
+        mixBus.connect(rvDry); rvDry.connect(master);
+        const rvPre = ctx.createDelay(0.3);
+        rvPre.delayTime.value = SYNTH.reverb.predelay / 1000;
         const conv = ctx.createConvolver();
-        conv.buffer = makeIR(ctx, SYNTH.reverb.size);
+        conv.buffer = makeIR(ctx, SYNTH.reverb.time);
         const rvWet = ctx.createGain();
         rvWet.gain.value = 0;
-        tone.connect(conv); conv.connect(rvWet); rvWet.connect(bus);
+        mixBus.connect(rvPre); rvPre.connect(conv); conv.connect(rvWet); rvWet.connect(master);
 
-        engine = { ctx, osc, env, filt, tone, master, bus, analyser,
-                   chLfo, chDepth, chWet, flLfo, flDepth, flFb, flWet, conv, rvWet };
+        engine = { ctx, voices, env, filt, tone, master, analyser, mixBus,
+                   chLfo, chDepth, chWet, flLfo, flDepth, flFb, flWet,
+                   rvDry, rvPre, conv, rvWet };
         applyParams();
         // drone: arranca sonando sin parar; si no, una nota de bienvenida
         if (SYNTH.drone) setDrone(true);
@@ -148,7 +179,7 @@ export function startEngine() {
 }
 
 // alterna entre "siempre sonando" (envolvente clavada arriba) y
-// "solo al tocar" (silencio hasta que el ADSR o el arpegio disparan)
+// "solo al tocar" (silencio hasta que las teclas o el arpegio disparan)
 export function setDrone(on) {
     SYNTH.drone = !!on;
     if (!engine || arp.on) return;
@@ -157,7 +188,7 @@ export function setDrone(on) {
     g.cancelScheduledValues(t);
     g.setValueAtTime(Math.max(g.value, 0.0015), t);
     if (SYNTH.drone) g.exponentialRampToValueAtTime(1, t + 0.06);
-    else g.exponentialRampToValueAtTime(0.0015, t + Math.max(0.01, SYNTH.adsr.r));
+    else g.exponentialRampToValueAtTime(0.0015, t + RELEASE);
 }
 
 export function stopEngine() {
@@ -167,19 +198,39 @@ export function stopEngine() {
         const t = engine.ctx.currentTime;
         engine.master.gain.cancelScheduledValues(t);
         engine.master.gain.setTargetAtTime(0, t, 0.02);
-        engine.osc.stop(t + 0.2);
+        engine.voices.forEach(v => v.o.stop(t + 0.2));
         engine.chLfo.stop(t + 0.2);
         engine.flLfo.stop(t + 0.2);
     } catch (e) { /* ya parado */ }
     engine = null;
 }
 
+// pone la frecuencia base en todas las voces (con o sin suavizado)
+function setFreq(hz, suave) {
+    const t = engine.ctx.currentTime;
+    engine.voices.forEach(v => {
+        if (suave) v.o.frequency.setTargetAtTime(hz, t, 0.02);
+        else v.o.frequency.setValueAtTime(hz, t);
+    });
+}
+
 // vuelca SYNTH y el volumen a los nodos; los efectos en off van con wet a cero
 export function applyParams() {
     if (!engine) return;
     const a = engine, t = a.ctx.currentTime, S = SYNTH;
-    a.osc.type = WAVES[S.wave].type;
-    if (!arp.on) a.osc.frequency.setTargetAtTime(noteHz(S.note), t, 0.02);
+
+    // voces: ganancia, detune simetrico y spread estereo por voz
+    const n = Math.max(1, Math.min(MAX_VOICES, Math.round(S.voices.n)));
+    a.voices.forEach((v, i) => {
+        v.o.type = WAVES[S.wave].type;
+        const activa = i < n;
+        v.vg.gain.setTargetAtTime(activa ? 1 / Math.sqrt(n) : 0, t, 0.03);
+        const pos = n === 1 ? 0 : (i / (n - 1)) * 2 - 1;   // -1 .. +1
+        v.o.detune.setTargetAtTime(activa ? S.voices.detune * pos : 0, t, 0.03);
+        if (v.pan) v.pan.pan.setTargetAtTime(activa ? pos * 0.6 : 0, t, 0.03);
+    });
+    if (!arp.on) setFreq(noteHz(S.note), true);
+
     a.filt.frequency.setTargetAtTime(filterHz(S.filter), t, 0.03);
     a.chLfo.frequency.setTargetAtTime(S.chorus.rate, t, 0.05);
     a.chDepth.gain.setTargetAtTime(S.chorus.depth * 0.006, t, 0.05);
@@ -188,34 +239,39 @@ export function applyParams() {
     a.flDepth.gain.setTargetAtTime(S.flanger.depth * 0.003, t, 0.05);
     a.flFb.gain.setTargetAtTime(S.flanger.feedback * 0.85, t, 0.05);
     a.flWet.gain.setTargetAtTime(S.flanger.on ? S.flanger.mix : 0, t, 0.05);
-    a.rvWet.gain.setTargetAtTime(S.reverb.on ? S.reverb.mix : 0, t, 0.05);
+
+    // reverb: crossfade — a tope de mix queda SOLO la reverb
+    const wet = S.reverb.on ? S.reverb.mix : 0;
+    a.rvDry.gain.setTargetAtTime(1 - wet, t, 0.05);
+    a.rvWet.gain.setTargetAtTime(wet * 2, t, 0.05);
+    a.rvPre.delayTime.setTargetAtTime(S.reverb.predelay / 1000, t, 0.05);
+
     a.master.gain.setTargetAtTime((vol / 8) * 0.5, t, 0.03);
 }
 
 export function rebuildReverb() {
     if (!engine) return;
-    try { engine.conv.buffer = makeIR(engine.ctx, SYNTH.reverb.size); } catch (e) { /* nada */ }
+    try { engine.conv.buffer = makeIR(engine.ctx, SYNTH.reverb.time); } catch (e) { /* nada */ }
 }
 
-/* ===== Notas: mono, con envolvente ADSR =====
-   noteOn dispara ataque→decay→sustain y se queda sonando;
-   noteOff suelta con el release. playNote hace las dos cosas sola. */
+/* ===== Notas: mono (con sus voces), envolvente de ataque editable =====
+   noteOn dispara el ataque y se queda sonando; noteOff suelta con un
+   release corto fijo. En drone la nota solo cambia la altura. */
 
 export function noteOn(step) {
     SYNTH.note = Math.max(0, Math.min(10, Math.round(step)));
     if (!engine || arp.on) return;
     clearTimeout(autoOff);
-    const t = engine.ctx.currentTime, e = SYNTH.adsr, g = engine.env.gain;
+    const t = engine.ctx.currentTime, g = engine.env.gain;
     if (SYNTH.drone) {
         // siempre sonando: la nota solo cambia la altura, sin redisparar nada
-        engine.osc.frequency.setTargetAtTime(noteHz(SYNTH.note), t, 0.02);
+        setFreq(noteHz(SYNTH.note), true);
         return;
     }
-    engine.osc.frequency.setValueAtTime(noteHz(SYNTH.note), t);
+    setFreq(noteHz(SYNTH.note), false);
     g.cancelScheduledValues(t);
     g.setValueAtTime(Math.max(g.value, 0.0015), t);
-    g.exponentialRampToValueAtTime(1, t + e.a);
-    g.exponentialRampToValueAtTime(Math.max(0.0015, e.s), t + e.a + e.d);
+    g.exponentialRampToValueAtTime(1, t + Math.max(0.001, SYNTH.arp.attack));
 }
 
 export function noteOff() {
@@ -223,28 +279,7 @@ export function noteOff() {
     const t = engine.ctx.currentTime, g = engine.env.gain;
     g.cancelScheduledValues(t);
     g.setValueAtTime(Math.max(g.value, 0.0015), t);
-    g.exponentialRampToValueAtTime(0.0015, t + Math.max(0.01, SYNTH.adsr.r));
-}
-
-// disparo manual de la envolvente (boton "tocar" del ADSR): suena tambien
-// en drone; alli, al soltar, el release desemboca en el tono continuo
-export function envTrigger() {
-    if (!engine || arp.on) return;
-    clearTimeout(autoOff);
-    const t = engine.ctx.currentTime, e = SYNTH.adsr, g = engine.env.gain;
-    engine.osc.frequency.setValueAtTime(noteHz(SYNTH.note), t);
-    g.cancelScheduledValues(t);
-    g.setValueAtTime(0.0015, t);
-    g.exponentialRampToValueAtTime(1, t + e.a);
-    g.exponentialRampToValueAtTime(Math.max(0.0015, e.s), t + e.a + e.d);
-}
-
-export function envRelease() {
-    if (!engine || arp.on) return;
-    const t = engine.ctx.currentTime, g = engine.env.gain;
-    g.cancelScheduledValues(t);
-    g.setValueAtTime(Math.max(g.value, 0.0015), t);
-    g.exponentialRampToValueAtTime(SYNTH.drone ? 1 : 0.0015, t + Math.max(0.01, SYNTH.adsr.r));
+    g.exponentialRampToValueAtTime(0.0015, t + RELEASE);
 }
 
 // nota que se suelta sola (potes, rueda, cambio de onda)
@@ -258,10 +293,11 @@ export function playNote(step, hold = 350) {
 export function noteGlide(step) {
     SYNTH.note = Math.max(0, Math.min(10, Math.round(step)));
     if (!engine || arp.on) return;
-    engine.osc.frequency.setTargetAtTime(noteHz(SYNTH.note), engine.ctx.currentTime, 0.02);
+    setFreq(noteHz(SYNTH.note), true);
 }
 
-/* ===== Arpegiador: recorre el patron y cada nota pasa por la envolvente ===== */
+/* ===== Arpegiador: recorre el patron; cada nota sube con el ataque
+   y cae sola antes del paso siguiente (ataque corto = pluck) ===== */
 
 export function arpStart() {
     if (!engine || arp.on) return;
@@ -271,17 +307,18 @@ export function arpStart() {
         if (!engine) return;
         const pat = ARP_PATRONES[SYNTH.arp.patron] || ARP_PATRONES[0];
         const n = Math.max(0, Math.min(10, SYNTH.note - 4 + pat.pasos[arp.i % pat.pasos.length]));
+        const durMs = Math.max(60, 60000 / SYNTH.arp.bpm);
+        const dur = durMs / 1000;
+        const atk = Math.min(Math.max(0.001, SYNTH.arp.attack), dur * 0.5);
         const t = engine.ctx.currentTime;
-        const e = SYNTH.adsr;
         const g = engine.env.gain;
-        engine.osc.frequency.setValueAtTime(noteHz(n), t);
+        setFreq(noteHz(n), false);
         g.cancelScheduledValues(t);
         g.setValueAtTime(0.0015, t);
-        g.exponentialRampToValueAtTime(1, t + e.a);
-        g.exponentialRampToValueAtTime(Math.max(0.0015, e.s), t + e.a + e.d);
-        g.exponentialRampToValueAtTime(0.0015, t + e.a + e.d + e.r);
+        g.exponentialRampToValueAtTime(1, t + atk);
+        g.exponentialRampToValueAtTime(0.0015, t + dur * 0.9);
         arp.i++;
-        arp.timer = setTimeout(paso, Math.max(60, 60000 / SYNTH.arp.bpm));
+        arp.timer = setTimeout(paso, durMs);
     };
     paso();
 }
