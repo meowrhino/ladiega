@@ -65,23 +65,58 @@ function buildMenu(DATA, allProjects) {
         return b;
     };
 
-    menuNav.appendChild(mkBtn('menu-item menu-link', 'home', () => carousel.goHome(), MENU_ICONS.home));
+    // data-nav identifica cada destino para poder marcar donde estas
+    const home = mkBtn('menu-item menu-link', 'home', () => carousel.goHome(), MENU_ICONS.home);
+    home.dataset.nav = 'home';
+    menuNav.appendChild(home);
 
     DATA.categories.forEach(cat => {
         const list = allProjects.filter(p => p.category === cat.slug);
         if (!list.length) return;
         const group = document.createElement('div');
         group.className = 'menu-group';
-        group.appendChild(mkBtn('menu-cat', cat.label, () => carousel.goCategory(cat.slug), MENU_ICONS[cat.slug]));
-        list.forEach(p => group.appendChild(mkBtn('menu-item menu-proj', p.title, () => carousel.goProject(p))));
+        const catBtn = mkBtn('menu-cat', cat.label, () => carousel.goCategory(cat.slug), MENU_ICONS[cat.slug]);
+        catBtn.dataset.nav = 'cat:' + cat.slug;
+        group.appendChild(catBtn);
+        list.forEach(p => {
+            const b = mkBtn('menu-item menu-proj', p.title, () => carousel.goProject(p));
+            b.dataset.nav = 'proj:' + p.slug;
+            group.appendChild(b);
+        });
         menuNav.appendChild(group);
     });
 
     menuNav.appendChild(mkBtn('menu-item menu-link', (DATA.about && DATA.about.title) || 'about', openOscAbout, MENU_ICONS.about));
 
     if (DATA.gestoria) {
-        menuNav.appendChild(mkBtn('menu-item menu-link', DATA.gestoria.label || 'gestoría', carousel.goGestoria, MENU_ICONS.gestoria));
+        const g = mkBtn('menu-item menu-link', DATA.gestoria.label || 'gestoría', carousel.goGestoria, MENU_ICONS.gestoria);
+        g.dataset.nav = 'gestoria';
+        menuNav.appendChild(g);
     }
+}
+
+// marca en el menu donde estas: el video que suena detras lleva la manita
+// (.is-playing) y la seccion desde la que se llego va subrayada (.is-here).
+// Devuelve el boton que se lleva el foco al abrir — antes era siempre "home".
+function markCurrent() {
+    const mode = carousel.getMode();
+    const p = carousel.getCurrentProject();
+    const seccion = mode === 'home' ? 'home'
+        : mode === 'gestoria' ? 'gestoria'
+        : mode === 'category' && p ? 'cat:' + p.category
+        : p ? 'proj:' + p.slug : '';
+    const enPantalla = p && mode !== 'gestoria' ? 'proj:' + p.slug : '';
+    let foco = null;
+    menuNav.querySelectorAll('[data-nav]').forEach(b => {
+        const suena = !!enPantalla && b.dataset.nav === enPantalla;
+        b.classList.toggle('is-playing', suena);
+        b.classList.toggle('is-here', b.dataset.nav === seccion);
+        if (suena) { b.setAttribute('aria-current', 'true'); foco = b; }
+        else b.removeAttribute('aria-current');
+    });
+    return foco
+        || (seccion && menuNav.querySelector('[data-nav="' + seccion + '"]'))
+        || menuNav.querySelector('.menu-item');
 }
 
 function openMenu() {
@@ -98,9 +133,12 @@ function openMenu() {
         b.style.animation = '';
         b.style.animationDelay = (i * 30) + 'ms';
     });
-    // seleccion inicial estilo consola
-    const first = menuNav.querySelector('.menu-item');
-    if (first) first.focus({ preventScroll: true });
+    // seleccion inicial estilo consola: cae sobre el video que hay detras
+    const sel = markCurrent();
+    if (sel) {
+        sel.focus({ preventScroll: true });
+        sel.scrollIntoView({ block: 'center' });
+    }
 }
 
 // cierre animado siempre: los botones del menu vuelan hacia sitios aleatorios

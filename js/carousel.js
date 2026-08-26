@@ -26,6 +26,7 @@ export function setHooks(h) { Object.assign(hooks, h); }
 export function curSlide() { return slides[cur]; }
 export function getMode() { return mode; }
 export function getPlaylist() { return playlist; }
+export function getCurrentProject() { return playlist[index] || null; }
 export function isEngaged() { return engaged; }
 export function engage() { engaged = true; }
 export function setSeeking(v) { seeking = v; }
@@ -182,9 +183,22 @@ export function updatePlayBtn() {
 
 /* ===== Transicion del carrusel ===== */
 
-function showVideo(project, dir = 1, instant = false) {
+// espera a que el video entrante tenga imagen (o se rinde a los 1400 ms)
+// para que ningun cambio enseñe un fotograma negro
+function whenReady(v, fn) {
+    if (v.readyState >= 2) { fn(); return; }
+    let hecho = false;
+    const go = () => { if (hecho) return; hecho = true; fn(); };
+    v.addEventListener('loadeddata', go, { once: true });
+    setTimeout(go, 1400);
+}
+
+// how: 'slide' desplazamiento lateral (flechas) · 'wipe' el barrido tapa la
+// pantalla y el cambio se hace debajo (menu) · 'instant' sin nada (arranque)
+function showVideo(project, dir = 1, how = 'slide') {
     const incoming = slides[1 - cur];
     const outgoing = slides[cur];
+    const instant = how !== 'slide';
     transitioning = true;
     engaged = false;
 
@@ -224,18 +238,22 @@ function showVideo(project, dir = 1, instant = false) {
             outgoing.root.classList.remove('notransition');
             incoming.root.classList.remove('notransition');
             transitioning = false;
-        }, instant ? 30 : 700);
+        }, instant ? 30 : 850);
     };
 
-    // esperar a que el video tenga imagen para que el desplazamiento no muestre negro
-    if (instant || incoming.video.readyState >= 2) {
-        begin();
-    } else {
-        let started = false;
-        const go = () => { if (!started) { started = true; begin(); } };
-        incoming.video.addEventListener('loadeddata', go, { once: true });
-        setTimeout(go, 1400);
+    if (how === 'instant') { begin(); return; }
+
+    // el barrido no se retira hasta que el video nuevo esta puesto: nunca se
+    // ve el cambio ni un fotograma en negro
+    if (how === 'wipe') {
+        playWipe(destapar => whenReady(incoming.video, () => {
+            begin();
+            setTimeout(destapar, 80);
+        }));
+        return;
     }
+
+    whenReady(incoming.video, begin);
 }
 
 // en el avance automatico, 1 de cada 4 veces el cambio va con barrido diagonal;
@@ -243,16 +261,7 @@ function showVideo(project, dir = 1, instant = false) {
 export function next(fromAuto) {
     if (transitioning || playlist.length < 2) return;
     index = (index + 1) % playlist.length; // al llegar al final vuelve al principio
-    if (fromAuto && Math.random() < 0.25) {
-        transitioning = true;
-        playWipe();
-        setTimeout(() => {
-            transitioning = false;
-            showVideo(playlist[index], 1, true);
-        }, 250);
-    } else {
-        showVideo(playlist[index], 1);
-    }
+    showVideo(playlist[index], 1, fromAuto && Math.random() < 0.25 ? 'wipe' : 'slide');
 }
 
 export function prev() {
@@ -303,17 +312,37 @@ function showBigTitle(text) {
 
 /* ===== Barrido diagonal ===== */
 
-export function playWipe() {
-    wipe.classList.remove('run');
+// dos tiempos: entra (el amarillo pasa de largo, el oscuro se queda tapando),
+// avisa a quien lo llamo para que cambie el video debajo, y se retira cuando
+// ese le devuelve el aviso. Asi el cambio dura lo que tiene que durar.
+const WIPE_COVER = 720;   // ms hasta que la pantalla queda tapada del todo
+const WIPE_OUT = 620;     // ms que tarda en marcharse
+
+let wipeInTimer = null;
+let wipeOutTimer = null;
+
+export function playWipe(alTapar) {
+    clearTimeout(wipeInTimer);
+    clearTimeout(wipeOutTimer);
+    wipe.classList.remove('run', 'away');
     void wipe.offsetWidth;
     wipe.classList.add('run');
-    setTimeout(() => wipe.classList.remove('run'), 750);
+    let destapado = false;
+    const destapar = () => {
+        if (destapado) return;
+        destapado = true;
+        wipe.classList.add('away');
+        wipeOutTimer = setTimeout(() => wipe.classList.remove('run', 'away'), WIPE_OUT);
+    };
+    wipeInTimer = setTimeout(() => {
+        if (alTapar) alTapar(destapar);
+        else destapar();
+    }, WIPE_COVER);
 }
 
 /* ===== Vistas ===== */
 
 export function goHome(instant = false) {
-    if (!instant) playWipe();
     exitGestoria();
     mode = 'home';
     const highlights = allProjects.filter(p => p.highlight);
@@ -321,31 +350,29 @@ export function goHome(instant = false) {
     index = 0;
     updateModeUI();
     hooks.closeOverlays();
-    showVideo(playlist[index], 1, instant);
+    showVideo(playlist[index], 1, instant ? 'instant' : 'wipe');
 }
 
 export function goCategory(slug) {
     const list = allProjects.filter(p => p.category === slug);
     if (!list.length) return;
-    playWipe();
     exitGestoria();
     mode = 'category';
     playlist = list;
     index = 0;
     updateModeUI();
     hooks.closeOverlays();
-    showVideo(playlist[index], 1);
+    showVideo(playlist[index], 1, 'wipe');
 }
 
 export function goProject(project) {
-    playWipe();
     exitGestoria();
     mode = 'single';
     playlist = [project];
     index = 0;
     updateModeUI();
     hooks.closeOverlays();
-    showVideo(project, 1);
+    showVideo(project, 1, 'wipe');
 }
 
 export function goGestoria() {

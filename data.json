@@ -169,7 +169,8 @@
     "clase": "compositora · diseñadora sonora",
     "_nota": "el about es la ficha-sintetizador; los faders (musica / diseño sonoro / papeleo) se editan en ABOUT_STATS dentro de js/about.js"
   },
-  "gestoria": {
+  "_gestoria_apagada": {
+    "_como_volver": "renombra esta clave a \"gestoria\" y vuelve a salir en el menú",
     "label": "gestoría",
     "photo": "data/logo_original.png",
     "_nota": "cambia photo por la ruta de una foto de la diega",
