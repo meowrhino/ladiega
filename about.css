@@ -36,7 +36,10 @@
 .oscab.oscillator .oscab-scope { display: block; }
 
 /* pista de que el sinte se toca (solo en modo oscilador) */
-.oscab-hint { display: none; font-size: 15px; color: var(--dim); margin-top: -12px; }
+.oscab-hint {
+    display: none; font-size: 15px; color: var(--dim); margin-top: -12px;
+    max-width: 100%; padding: 0 16px; text-align: center;
+}
 .oscab.oscillator .oscab-hint { display: block; }
 
 /* ficha: los tres stats, solo en reposo */
@@ -48,6 +51,43 @@
 @keyframes oscabFill { from { transform: scaleY(0); } }
 .oscab-knob { position: absolute; left: 50%; width: 30px; height: 14px; background: #fff; transform: translate(-50%, 50%); box-shadow: 0 0 0 3px #000; }
 .oscab-flbl { font-size: 14px; color: var(--dim); text-align: center; line-height: 1.15; }
+
+/* pads: la pentatonica a la vista. Es lo primero que se ve al encender el
+   sinte y lo unico con lo que se puede tocar en movil */
+/* las once caben en una fila en escritorio; en movil se parten en dos */
+.oscab-pads { display: none; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 0 10px; }
+.oscab.oscillator .oscab-pads { display: flex; }
+.oscab-pad {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: clamp(44px, 6.4vw, 64px); height: clamp(58px, 8vw, 80px); gap: 2px;
+    background: #14141f; color: var(--text);
+    box-shadow: inset 0 0 0 3px var(--highlight), 0 3px 0 #000;
+    touch-action: none; user-select: none;
+    transition: transform 0.08s ease, background 0.08s ease;
+}
+.oscab-pad-n { font-size: clamp(17px, 2.4vw, 22px); line-height: 1; }
+.oscab-pad-k { font-size: 13px; line-height: 1; color: var(--dim); text-transform: uppercase; }
+.oscab-pad:hover, .oscab-pad:focus-visible { transform: translateY(-3px); outline: none; }
+.oscab-pad.on, .oscab-pad:active {
+    background: var(--highlight); color: #000;
+    transform: translateY(3px); box-shadow: inset 0 0 0 3px #000;
+}
+.oscab-pad.on .oscab-pad-k, .oscab-pad:active .oscab-pad-k { color: rgba(0, 0, 0, 0.6); }
+
+/* presets: un clic y suena otra cosa */
+.oscab-presets { display: none; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.oscab.oscillator .oscab-presets { display: flex; }
+.oscab-preset {
+    font-size: 21px; line-height: 1; padding: 4px 16px 6px;
+    color: var(--text); box-shadow: inset 0 0 0 2px var(--highlight);
+    transform: rotate(-1deg); transition: transform 0.15s ease, color 0.15s ease;
+}
+.oscab-preset:nth-child(even) { transform: rotate(1.2deg); }
+.oscab-preset:hover, .oscab-preset:focus-visible { color: var(--highlight); transform: scale(1.08) rotate(-2deg); outline: none; }
+.oscab-preset.on {
+    background: var(--highlight); color: #000; box-shadow: 3px 3px 0 #000;
+    clip-path: polygon(0 12%, 97% 0, 100% 90%, 3% 100%);
+}
 
 /* potenciometros: solo en modo oscilador */
 .oscab-pots { display: none; flex-wrap: wrap; justify-content: center; gap: clamp(18px, 6vw, 80px); }
@@ -64,9 +104,10 @@
 .oscab-plbl { font-size: 15px; color: var(--dim); }
 .oscab-pval { font-size: 19px; color: var(--highlight); text-align: center; line-height: 1.1; }
 
-/* modulos con modal */
+/* modulos: el nombre enciende el efecto, los "···" abren sus ajustes */
 .oscab-mods { display: none; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .oscab.oscillator .oscab-mods { display: flex; }
+.oscab-modwrap { display: inline-flex; align-items: stretch; }
 .oscab-mod {
     font-size: 19px; line-height: 1; padding: 5px 15px 7px;
     color: var(--text); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.32);
@@ -74,9 +115,16 @@
 }
 .oscab-mod:hover, .oscab-mod:focus-visible { color: var(--highlight); transform: translateY(-2px) rotate(-1.5deg); outline: none; }
 .oscab-mod.on { background: var(--highlight); color: #000; box-shadow: none; clip-path: polygon(0 12%, 97% 0, 100% 90%, 3% 100%); }
+.oscab-modset {
+    font-size: 17px; line-height: 1; padding: 5px 9px 9px; margin-left: 3px;
+    color: var(--dim); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+.oscab-modset:hover, .oscab-modset:focus-visible { color: var(--highlight); transform: translateY(-2px); outline: none; }
 
 /* volumen y cancion: solo en modo oscilador */
-.oscab-vol { display: none; align-items: center; gap: 12px; }
+/* en movil no cabe todo en una linea: que se parta en vez de salirse */
+.oscab-vol { display: none; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 0 12px; }
 .oscab.oscillator .oscab-vol { display: flex; }
 .oscab-vbtn {
     font-size: 26px; line-height: 1; width: 34px; height: 34px;
@@ -144,8 +192,13 @@
 }
 .oscab-modal-onoff.hidden { display: none; }
 
-.oscab-prow { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
-.oscab-pname { flex: 0 0 96px; font-size: 17px; color: var(--dim); }
+.oscab-prow { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+/* el nombre en cristiano y debajo, chiquitito, como se llama en un sinte */
+.oscab-pname { flex: 0 0 128px; font-size: 17px; line-height: 1.05; color: var(--text); }
+.oscab-pname em {
+    display: block; font-style: normal; font-size: 13px;
+    color: var(--dim); opacity: 0.75;
+}
 .oscab-pnum { flex: 0 0 84px; text-align: right; font-size: 17px; color: var(--highlight); }
 .oscab-prange {
     flex: 1; -webkit-appearance: none; appearance: none;

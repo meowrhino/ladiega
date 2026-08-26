@@ -281,15 +281,40 @@ function bindUI() {
     });
     seekBar.addEventListener('change', () => carousel.setSeeking(false));
 
-    // la telita: hover en escritorio; en movil, tap-zones laterales para navegar
-    // y el centro enseña/esconde los controles
+    // escritorio: mover el raton saca la interfaz.
+    // movil: deslizar a los lados cambia de video; un toque suelto en los
+    // tercios laterales tambien, y en el centro enseña/esconde los controles.
+    // Todo en el mismo sitio para que un deslizamiento no cuente ademas como toque.
     const stage = document.getElementById('stage');
     if (isTouch) {
-        stage.addEventListener('click', e => {
+        const ARRASTRE = 55;   // px que hay que deslizar para que cuente
+        const QUIETO = 12;     // px de margen para seguir considerandolo un toque
+        let x0 = 0, y0 = 0, t0 = 0, siguiendo = false;
+
+        stage.addEventListener('pointerdown', e => {
+            x0 = e.clientX; y0 = e.clientY; t0 = e.timeStamp; siguiendo = true;
+        });
+        stage.addEventListener('pointercancel', () => { siguiendo = false; });
+        stage.addEventListener('pointerup', e => {
+            if (!siguiendo) return;
+            siguiendo = false;
+            const dx = e.clientX - x0;
+            const dy = e.clientY - y0;
+            const puedeNavegar = carousel.getMode() !== 'single' && carousel.getPlaylist().length > 1;
+
+            // deslizamiento: largo, mas horizontal que vertical y sin dormirse
+            if (puedeNavegar && Math.abs(dx) > ARRASTRE &&
+                Math.abs(dx) > Math.abs(dy) * 1.4 && e.timeStamp - t0 < 700) {
+                playSfx('move');
+                buzz();
+                if (dx < 0) carousel.next(); else carousel.prev();
+                return;
+            }
+
+            if (Math.abs(dx) > QUIETO || Math.abs(dy) > QUIETO) return;  // ni toque ni deslizamiento
             const w = window.innerWidth;
-            const canNav = carousel.getMode() !== 'single' && carousel.getPlaylist().length > 1;
-            if (canNav && e.clientX < w * 0.3) { playSfx('move'); buzz(); carousel.prev(); }
-            else if (canNav && e.clientX > w * 0.7) { playSfx('move'); buzz(); carousel.next(); }
+            if (puedeNavegar && x0 < w * 0.3) { playSfx('move'); buzz(); carousel.prev(); }
+            else if (puedeNavegar && x0 > w * 0.7) { playSfx('move'); buzz(); carousel.next(); }
             else if (controls.classList.contains('faded')) showControls();
             else hideControls();
         });

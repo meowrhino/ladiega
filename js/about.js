@@ -1,10 +1,10 @@
 // la diega — ABOUT: la ficha de la diega es un sintetizador de verdad.
 // En reposo se ven los stats (musica / diseño sonoro / papeleo). Al pulsar
-// "cambiar a oscilador" aparece el sinte: tres potes (onda, frecuencia,
-// filtro), cinco modulos con su modal (voces con detune; chorus, flanger,
-// reverb y arpegio — con ataque — con su ON/OFF), el volumen, el chip
-// "drone" y el de la cancion del video. Se toca con las teclas A–L,
-// arrastrando la onda (theremin) o manteniendo la barra espaciadora.
+// "encender el sinte" aparece: los pads de la pentatonica (se tocan con el
+// dedo, el raton o el teclado A–Ñ), los presets, tres potes (onda, nota,
+// filtro), cinco modulos —el nombre enciende el efecto, los "···" abren sus
+// ajustes—, el volumen, el chip "drone" y el de la cancion del video.
+// La onda tambien se arrastra como un theremin y el espacio mantiene la nota.
 // El overlay se inyecta desde aqui, no existe en index.html.
 // El motor de audio vive en synth.js.
 
@@ -19,37 +19,84 @@ const ABOUT_STATS = [
     { label: 'papeleo',       value: 2  }
 ];
 
-// cada modulo edita su trozo de SYNTH desde un modal
+// cada modulo edita su trozo de SYNTH desde un modal.
+// label = en cristiano (lo que hace) · tec = como se llama en un sinte de verdad
 const MODULES = {
     voces: { label: 'voces', target: 'voices', params: [
-        { k: 'n',      label: 'voces',  min: 1, max: 5,  paso: 1, uds: 'n'  },
-        { k: 'detune', label: 'detune', min: 0, max: 50, paso: 1, uds: 'ct' }
+        { k: 'n',      label: 'cuántas',          tec: 'voices', min: 1, max: 5,  paso: 1, uds: 'n'  },
+        { k: 'detune', label: 'cuánto desafinan', tec: 'detune', min: 0, max: 50, paso: 1, uds: 'ct' }
     ]},
     chorus: { label: 'chorus', target: 'chorus', params: [
-        { k: 'rate',  label: 'Hz',      min: 0.05, max: 6, paso: 0.05, uds: 'Hz' },
-        { k: 'depth', label: 'depth',   min: 0,    max: 1, paso: 0.01, uds: '' },
-        { k: 'mix',   label: 'dry/wet', min: 0,    max: 1, paso: 0.01, uds: '' }
+        { k: 'rate',  label: 'velocidad',       tec: 'rate',    min: 0.05, max: 6, paso: 0.05, uds: 'Hz' },
+        { k: 'depth', label: 'cuánto se mueve', tec: 'depth',   min: 0,    max: 1, paso: 0.01, uds: '' },
+        { k: 'mix',   label: 'cuánto se nota',  tec: 'dry/wet', min: 0,    max: 1, paso: 0.01, uds: '' }
     ]},
     flanger: { label: 'flanger', target: 'flanger', params: [
-        { k: 'rate',     label: 'Hz',       min: 0.05, max: 4,   paso: 0.05, uds: 'Hz' },
-        { k: 'depth',    label: 'depth',    min: 0,    max: 1,   paso: 0.01, uds: '' },
-        { k: 'feedback', label: 'feedback', min: 0,    max: 0.9, paso: 0.01, uds: '' },
-        { k: 'mix',      label: 'dry/wet',  min: 0,    max: 1,   paso: 0.01, uds: '' }
+        { k: 'rate',     label: 'velocidad',       tec: 'rate',     min: 0.05, max: 4,   paso: 0.05, uds: 'Hz' },
+        { k: 'depth',    label: 'cuánto se mueve', tec: 'depth',    min: 0,    max: 1,   paso: 0.01, uds: '' },
+        { k: 'feedback', label: 'cuánto rebota',   tec: 'feedback', min: 0,    max: 0.9, paso: 0.01, uds: '' },
+        { k: 'mix',      label: 'cuánto se nota',  tec: 'dry/wet',  min: 0,    max: 1,   paso: 0.01, uds: '' }
     ]},
     reverb: { label: 'reverb', target: 'reverb', params: [
-        { k: 'time',     label: 'time',      min: 0.2, max: 5,   paso: 0.1,  uds: 's' },
-        { k: 'predelay', label: 'pre-delay', min: 0,   max: 200, paso: 5,    uds: 'ms' },
-        { k: 'mix',      label: 'dry/wet',   min: 0,   max: 1,   paso: 0.01, uds: '' }
+        { k: 'time',     label: 'cuánto dura',   tec: 'time',      min: 0.2, max: 5,   paso: 0.1,  uds: 's' },
+        { k: 'predelay', label: 'cuánto tarda',  tec: 'pre-delay', min: 0,   max: 200, paso: 5,    uds: 'ms' },
+        { k: 'mix',      label: 'cuánto se moja', tec: 'dry/wet',  min: 0,   max: 1,   paso: 0.01, uds: '' }
     ]},
     arpegio: { label: 'arpegio', target: 'arp', params: [
-        { k: 'bpm',    label: 'velocidad', min: 60,    max: 900, paso: 10,    uds: 'bpm' },
-        { k: 'patron', label: 'patrón',    min: 0,     max: 3,   paso: 1,     uds: '', lista: ARP_PATRONES },
-        { k: 'attack', label: 'ataque',    min: 0.001, max: 0.5, paso: 0.001, uds: 's' }
+        { k: 'bpm',    label: 'velocidad',      tec: 'bpm',    min: 60,    max: 900, paso: 10,    uds: 'bpm' },
+        { k: 'patron', label: 'por dónde sube', tec: 'patrón', min: 0,     max: 3,   paso: 1,     uds: '', lista: ARP_PATRONES },
+        { k: 'attack', label: 'golpe ↔ suave',  tec: 'attack', min: 0.001, max: 0.5, paso: 0.001, uds: 's' }
     ]}
 };
 
 // modulos que no son efectos: sin interruptor ON/OFF en su modal
 const SIN_TOGGLE = { voces: true };
+
+// teclas del teclado para los diez primeros pads (el once solo se toca)
+const KEYS = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ñ'];
+
+// presets: un clic y cambia todo de golpe. Es la puerta de entrada — nadie
+// descubre un sinte moviendo potes de uno en uno.
+const PRESETS = [
+    { label: 'nave', arp: false, s: {
+        wave: 2, filter: 6, drone: true,
+        voices:  { n: 3, detune: 18 },
+        chorus:  { on: true, rate: 0.8, depth: 0.6, mix: 0.45 },
+        flanger: { on: false },
+        reverb:  { on: true, time: 3.4, predelay: 40, mix: 0.4 }
+    }},
+    { label: 'campana', arp: false, s: {
+        wave: 0, filter: 10, drone: false,
+        voices:  { n: 2, detune: 5 },
+        chorus:  { on: false },
+        flanger: { on: false },
+        reverb:  { on: true, time: 3.6, predelay: 60, mix: 0.45 },
+        arp:     { attack: 0.003 }
+    }},
+    { label: 'coro', arp: false, s: {
+        wave: 1, filter: 8, drone: true,
+        voices:  { n: 5, detune: 28 },
+        chorus:  { on: true, rate: 0.5, depth: 0.75, mix: 0.55 },
+        flanger: { on: false },
+        reverb:  { on: true, time: 2.2, predelay: 20, mix: 0.3 }
+    }},
+    { label: 'goma', arp: false, s: {
+        wave: 3, filter: 4, drone: false,
+        voices:  { n: 1, detune: 0 },
+        chorus:  { on: false },
+        flanger: { on: true, rate: 0.6, depth: 0.85, feedback: 0.65, mix: 0.5 },
+        reverb:  { on: true, time: 1, predelay: 0, mix: 0.15 },
+        arp:     { attack: 0.02 }
+    }},
+    { label: 'chunda', arp: true, s: {
+        wave: 2, filter: 7, drone: false,
+        voices:  { n: 2, detune: 12 },
+        chorus:  { on: false },
+        flanger: { on: false },
+        reverb:  { on: true, time: 1.4, predelay: 10, mix: 0.22 },
+        arp:     { bpm: 420, patron: 0, attack: 0.004 }
+    }}
+];
 
 let aboutData = {};
 let oscOverlay = null;
@@ -137,8 +184,26 @@ function renderAbout(about) {
             '<span class="oscab-pval"></span>' +
         '</div>';
 
+    // el nombre del modulo enciende y apaga el efecto; los "···" abren sus ajustes
     const mods = Object.keys(MODULES).map(k =>
-        '<button class="oscab-mod" data-m="' + k + '">' + MODULES[k].label + '</button>').join('');
+        '<span class="oscab-modwrap">' +
+            '<button class="oscab-mod" data-m="' + k + '">' + MODULES[k].label + '</button>' +
+            (SIN_TOGGLE[k] ? '' :
+                '<button class="oscab-modset" data-m="' + k + '" aria-label="ajustes de ' + MODULES[k].label + '">···</button>') +
+        '</span>').join('');
+
+    const presets = PRESETS.map((p, i) =>
+        '<button class="oscab-preset" data-preset="' + i + '">' + p.label + '</button>').join('');
+
+    // pads: las 11 notas de la pentatonica, para tocar con el dedo o el raton
+    // (los diez primeros llevan ademas su tecla del teclado)
+    let pads = '';
+    for (let i = 0; i <= 10; i++) {
+        pads += '<button class="oscab-pad" data-i="' + i + '">' +
+            '<span class="oscab-pad-n">' + synth.noteLabel(i) + '</span>' +
+            '<span class="oscab-pad-k">' + (KEYS[i] || '·') + '</span>' +
+        '</button>';
+    }
 
     let vol = '';
     for (let i = 0; i < 8; i++) vol += '<span class="oscab-vseg"></span>';
@@ -146,13 +211,15 @@ function renderAbout(about) {
     return '<div class="oscab">' +
         '<div class="oscab-wave">' + wave + '</div>' +
         '<canvas class="oscab-scope" width="640" height="140"></canvas>' +
-        '<div class="oscab-hint">teclas A–L · arrastra la onda · espacio mantiene la nota</div>' +
+        '<div class="oscab-hint">toca los pads · o el teclado A–Ñ · arrastra la onda como un theremin</div>' +
         '<div class="oscab-head">' +
             '<div class="oscab-name">' + (about.name || 'la diega') + '</div>' +
             '<div class="oscab-role">' + (about.clase || '') + '</div>' +
         '</div>' +
         '<div class="oscab-desk">' + stats + '</div>' +
-        '<div class="oscab-pots">' + pot('wave', 'tipo de onda') + pot('note', 'frecuencia') + pot('filter', 'filtro') + '</div>' +
+        '<div class="oscab-pads">' + pads + '</div>' +
+        '<div class="oscab-presets">' + presets + '</div>' +
+        '<div class="oscab-pots">' + pot('wave', 'tipo de onda') + pot('note', 'nota') + pot('filter', 'filtro') + '</div>' +
         '<div class="oscab-mods">' + mods + '</div>' +
         '<div class="oscab-vol">' +
             '<button class="oscab-vbtn" data-d="-1" aria-label="bajar volumen">−</button>' +
@@ -161,7 +228,7 @@ function renderAbout(about) {
             '<button class="oscab-chip oscab-drone">drone</button>' +
             '<button class="oscab-chip oscab-song">canción</button>' +
         '</div>' +
-        '<button class="oscab-osc-btn">cambiar a oscilador</button>' +
+        '<button class="oscab-osc-btn">encender el sinte</button>' +
     '</div>' +
     '<div class="oscab-modal hidden">' +
         '<div class="oscab-modal-box">' +
@@ -191,7 +258,8 @@ function moduleBody(key) {
     const st = SYNTH[m.target];
     return m.params.map(p =>
         '<label class="oscab-prow">' +
-            '<span class="oscab-pname">' + p.label + '</span>' +
+            '<span class="oscab-pname">' + p.label +
+                (p.tec ? '<em>' + p.tec + '</em>' : '') + '</span>' +
             '<input class="oscab-prange" type="range" data-k="' + p.k + '" min="' + p.min +
                 '" max="' + p.max + '" step="' + p.paso + '" value="' + st[p.k] + '">' +
             '<span class="oscab-pnum">' + fmtParam(p, st[p.k]) + '</span>' +
@@ -217,6 +285,7 @@ function openModule(ov, key) {
 
     // ON/OFF en la cabecera: asi se sabe si el efecto se esta aplicando
     const tgl = modal.querySelector('.oscab-modal-onoff');
+    modal._pinta = null;
     if (SIN_TOGGLE[key]) {
         tgl.classList.add('hidden');
     } else {
@@ -225,18 +294,10 @@ function openModule(ov, key) {
             tgl.textContent = on ? 'on' : 'off';
             tgl.classList.toggle('on', on);
         };
+        modal._pinta = pintaTgl;   // el chip de fuera tambien lo enciende
         tgl.classList.remove('hidden');
         pintaTgl();
-        tgl.onclick = () => {
-            playSfx('move');
-            if (key === 'arpegio') synth.isArpOn() ? synth.arpStop() : synth.arpStart();
-            else {
-                SYNTH[m.target].on = !SYNTH[m.target].on;
-                synth.applyParams();
-            }
-            pintaTgl();
-            refreshMods(ov);
-        };
+        tgl.onclick = () => toggleModule(ov, key);
     }
 
     modal.classList.remove('hidden');
@@ -253,6 +314,23 @@ function openModule(ov, key) {
             synth.applyParams();
         });
     });
+}
+
+// enciende/apaga un efecto. Lo llaman el chip de la parrilla y el ON/OFF
+// del modal, para que digan siempre lo mismo
+function toggleModule(ov, key) {
+    playSfx('move');
+    if (key === 'arpegio') {
+        synth.isArpOn() ? synth.arpStop() : synth.arpStart();
+    } else {
+        const t = MODULES[key].target;
+        SYNTH[t].on = !SYNTH[t].on;
+        synth.applyParams();
+    }
+    const modal = ov.querySelector('.oscab-modal');
+    if (modal && modal._pinta) modal._pinta();
+    marcaPreset(ov, -1);
+    refreshMods(ov);
 }
 
 function closeModule(ov) {
@@ -286,6 +364,45 @@ function pintaPotes(ov) {
     }
 }
 
+// el pad encendido es el de la nota que esta sonando; en drone se queda fijo,
+// tocando manda la nota que se esta pulsando
+function pintaPads(ov, tocando) {
+    const activo = (tocando === undefined || tocando < 0)
+        ? (synth.engineOn() && SYNTH.drone ? SYNTH.note : -1)
+        : tocando;
+    ov.querySelectorAll('.oscab-pad').forEach(p => p.classList.toggle('on', +p.dataset.i === activo));
+}
+
+// -1 = ninguno (se ha tocado algo a mano y ya no es tal cual el preset)
+function marcaPreset(ov, i) {
+    ov.querySelectorAll('.oscab-preset').forEach(b => b.classList.toggle('on', +b.dataset.preset === i));
+}
+
+// vuelca un preset entero sobre SYNTH y lo deja sonando
+function aplicaPreset(ov, i) {
+    const p = PRESETS[i];
+    if (!p) return;
+    playSfx('select');
+    Object.keys(p.s).forEach(k => {
+        const v = p.s[k];
+        if (v && typeof v === 'object' && SYNTH[k]) Object.assign(SYNTH[k], v);
+        else SYNTH[k] = v;
+    });
+    synth.rebuildReverb();
+    if (p.arp) { if (!synth.isArpOn()) synth.arpStart(); }
+    else if (synth.isArpOn()) synth.arpStop();
+    synth.setDrone(SYNTH.drone);
+    synth.applyParams();
+    // que se oiga al momento: si no hay drone ni arpegio, una nota de muestra
+    if (!SYNTH.drone && !p.arp) synth.playNote(SYNTH.note, 700);
+    pintaPotes(ov);
+    pintaPads(ov);
+    refreshMods(ov);
+    marcaPreset(ov, i);
+    const dr = ov.querySelector('.oscab-drone');
+    if (dr) dr.classList.toggle('on', SYNTH.drone);
+}
+
 // el chip de la cancion siempre refleja lo que suena de verdad
 function syncSongChip() {
     if (!oscOverlay || oscOverlay.classList.contains('hidden')) return;
@@ -307,6 +424,8 @@ function setPot(ov, key, v) {
         if (key === 'wave') synth.playNote(SYNTH.note);
     }
     pintaPotes(ov);
+    pintaPads(ov);
+    marcaPreset(ov, -1);
 }
 
 function wireAbout(ov) {
@@ -323,23 +442,58 @@ function wireAbout(ov) {
         if (oscAnim.on) {
             oscAnimStop();
             root.classList.remove('oscillator');
-            btn.textContent = 'cambiar a oscilador';
+            btn.textContent = 'encender el sinte';
             closeModule(ov);
         } else {
             oscAnim.on = true;
             root.classList.add('oscillator');
-            btn.textContent = 'volver a la onda';
+            btn.textContent = 'apagar el sinte';
             pintaPotes(ov);
             synth.startEngine();
             oscAnimStart(ov);
         }
+        pintaPads(ov);
         refreshMods(ov);
     });
 
-    // cada modulo abre su modal; el ON/OFF vive dentro del modal
+    // el nombre del modulo enciende y apaga el efecto (un clic, se oye);
+    // los ajustes finos estan detras de los "···". Las voces no son un
+    // efecto: no hay nada que encender, asi que abren sus ajustes directas
     ov.querySelectorAll('.oscab-mod').forEach(b => {
+        b.addEventListener('click', () => {
+            if (SIN_TOGGLE[b.dataset.m]) openModule(ov, b.dataset.m);
+            else toggleModule(ov, b.dataset.m);
+        });
+    });
+    ov.querySelectorAll('.oscab-modset').forEach(b => {
         b.addEventListener('click', () => openModule(ov, b.dataset.m));
     });
+
+    // presets: la puerta de entrada, un clic y suena otra cosa
+    ov.querySelectorAll('.oscab-preset').forEach(b => {
+        b.addEventListener('click', () => aplicaPreset(ov, +b.dataset.preset));
+    });
+
+    // pads: la pentatonica para tocar con el dedo o el raton
+    ov.querySelectorAll('.oscab-pad').forEach(p => {
+        const i = +p.dataset.i;
+        const suelta = () => {
+            if (!synth.engineOn()) return;
+            synth.noteOff();
+            pintaPads(ov);
+        };
+        p.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            if (!synth.engineOn()) return;
+            try { p.setPointerCapture(e.pointerId); } catch (_) {}
+            synth.noteOn(i);
+            pintaPads(ov, i);
+            pintaPotes(ov);
+        });
+        p.addEventListener('pointerup', suelta);
+        p.addEventListener('pointercancel', suelta);
+    });
+    pintaPads(ov);
 
     const modal = ov.querySelector('.oscab-modal');
     modal.querySelector('.oscab-modal-close').addEventListener('click', () => { playSfx('back'); closeModule(ov); });
@@ -360,6 +514,7 @@ function wireAbout(ov) {
     droneBtn.addEventListener('click', () => {
         synth.setDrone(!SYNTH.drone);
         paintDrone();
+        pintaPads(ov);
         playSfx('move');
     });
 
@@ -408,20 +563,21 @@ function wireAbout(ov) {
         try { cv.setPointerCapture(e.pointerId); } catch (_) {}
         synth.noteOn(stepAt(e));
         pintaPotes(ov);
+        pintaPads(ov, SYNTH.note);
     });
     cv.addEventListener('pointermove', e => {
         if (!toca) return;
         synth.noteGlide(stepAt(e));
         pintaPotes(ov);
+        pintaPads(ov, SYNTH.note);
     });
-    const sueltaCv = () => { if (toca) { toca = false; synth.noteOff(); } };
+    const sueltaCv = () => { if (toca) { toca = false; synth.noteOff(); pintaPads(ov); } };
     cv.addEventListener('pointerup', sueltaCv);
     cv.addEventListener('pointercancel', sueltaCv);
 }
 
-/* ===== Teclado: A–L tocan la pentatonica, espacio mantiene la nota ===== */
+/* ===== Teclado: A–Ñ tocan la pentatonica, espacio mantiene la nota ===== */
 
-const KEYS = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ñ'];
 const teclas = new Set();
 
 function bindTeclado() {
@@ -429,7 +585,7 @@ function bindTeclado() {
         if (!oscOverlay || oscOverlay.classList.contains('hidden') || !synth.engineOn()) return;
         if (e.key === ' ') {
             e.preventDefault();
-            if (!e.repeat) synth.noteOn(SYNTH.note);
+            if (!e.repeat) { synth.noteOn(SYNTH.note); pintaPads(oscOverlay, SYNTH.note); }
             return;
         }
         const i = KEYS.indexOf(e.key.toLowerCase());
@@ -437,16 +593,19 @@ function bindTeclado() {
         teclas.add(e.key.toLowerCase());
         synth.noteOn(i);
         pintaPotes(oscOverlay);
+        pintaPads(oscOverlay, i);   // el pad se enciende tambien desde el teclado
     });
     document.addEventListener('keyup', e => {
         if (!oscOverlay || oscOverlay.classList.contains('hidden') || !synth.engineOn()) { teclas.clear(); return; }
-        if (e.key === ' ') { synth.noteOff(); return; }
+        if (e.key === ' ') { synth.noteOff(); pintaPads(oscOverlay); return; }
         if (!teclas.delete(e.key.toLowerCase())) return;
-        if (!teclas.size) synth.noteOff();
+        if (!teclas.size) { synth.noteOff(); pintaPads(oscOverlay); }
         else {
             // legato: al soltar una tecla vuelve la ultima que siga pulsada
-            synth.noteOn(KEYS.indexOf([...teclas][teclas.size - 1]));
+            const i = KEYS.indexOf([...teclas][teclas.size - 1]);
+            synth.noteOn(i);
             pintaPotes(oscOverlay);
+            pintaPads(oscOverlay, i);
         }
     });
 }
