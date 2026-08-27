@@ -1,10 +1,10 @@
 /* ============================================================
    ABOUT: la ficha-sintetizador. En reposo se ven los stats y la
-   onda decorativa; con .oscillator aparece el sinte, repartido en
-   bloques con rotulo (.oscab-block): toca (pads + octava) · suena a
-   (presets) · retoca (potes) · efectos (modulos con su modal) ·
-   sonido (volumen y chips). Arriba, el osciloscopio cruza la
-   pantalla y se toca como un theremin.
+   onda decorativa; con .oscillator aparece el sinte, de arriba abajo:
+   potes (onda y filtro) · presets / efectos en pestañas · el teclado
+   de una octava con sus negras y el cambio de octava · volumen y el
+   chip de la cancion. Arriba, el osciloscopio cruza la pantalla y se
+   toca como un theremin.
    El JS que lo mueve esta en js/about.js y js/synth.js.
    ============================================================ */
 .osc-about {
@@ -37,13 +37,6 @@
 .oscab.oscillator .oscab-wave { display: none; }
 .oscab.oscillator .oscab-scope { display: block; }
 
-/* pista de que el sinte se toca (solo en modo oscilador) */
-.oscab-hint {
-    display: none; font-size: 15px; color: var(--dim); margin-top: -12px;
-    max-width: 100%; padding: 0 16px; text-align: center;
-}
-.oscab.oscillator .oscab-hint { display: block; }
-
 /* ficha: los tres stats, solo en reposo */
 .oscab-desk { display: flex; gap: clamp(16px, 4vw, 46px); align-items: flex-end; padding: 10px 0; }
 .oscab.oscillator .oscab-desk { display: none; }
@@ -55,49 +48,45 @@
 .oscab-flbl { font-size: 14px; color: var(--dim); text-align: center; line-height: 1.15; }
 
 /* ===== Bloques del sinte =====
-   cada trozo (toca · suena a · retoca · efectos · sonido) va con su rotulo,
-   para que no sea una pila de botones sueltos. Solo en modo oscilador */
+   solo agrupan; los rotulos se quitaron a proposito, el sinte se lee solo */
 .oscab-block { display: none; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 .oscab.oscillator .oscab-block { display: flex; }
-.oscab-sec {
-    display: flex; flex-direction: column; align-items: center; gap: 1px;
-    font-size: 17px; line-height: 1; letter-spacing: 0.22em;
-    text-transform: uppercase; color: var(--highlight); opacity: 0.85;
-}
-.oscab-sec::after {
-    content: ''; width: 26px; height: 3px; margin-top: 4px;
-    background: var(--highlight); opacity: 0.5;
-}
-.oscab-sec em {
-    order: 1; font-style: normal; font-size: 13px; letter-spacing: 0.02em;
-    text-transform: none; color: var(--dim); opacity: 0.9;
-    max-width: 92vw; text-align: center;
-}
 
-/* pads: la pentatonica a la vista. Es lo primero del sinte y lo unico con lo
-   que se puede tocar en movil. Las once caben en una fila en escritorio;
-   en movil se parten en dos */
-.oscab-pads { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 0 10px; }
-.oscab-pad {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    width: clamp(44px, 6.4vw, 64px); height: clamp(58px, 8vw, 80px); gap: 2px;
-    background: #14141f; color: var(--text);
-    box-shadow: inset 0 0 0 3px var(--highlight), 0 3px 0 #000;
+/* teclado de una octava, de do a do: las blancas en fila y las negras
+   encima, cada una en su hueco (--n = cuantas blancas quedan a su izquierda) */
+.oscab-piano {
+    --kw: clamp(34px, 5vw, 52px);
+    --kh: clamp(104px, 13vw, 136px);
+    position: relative;
     touch-action: none; user-select: none;
-    transition: transform 0.08s ease, background 0.08s ease;
 }
-.oscab-pad-n { font-size: clamp(17px, 2.4vw, 22px); line-height: 1; }
-.oscab-pad-k { font-size: 13px; line-height: 1; color: var(--dim); text-transform: uppercase; }
-.oscab-pad:hover { transform: translateY(-3px); }
-.oscab-pad:focus-visible { transform: translateY(-3px); outline: 3px solid #fff; outline-offset: 2px; }
-
-.oscab-pad.on, .oscab-pad:active {
-    background: var(--highlight); color: #000;
-    transform: translateY(3px); box-shadow: inset 0 0 0 3px #000;
+.oscab-blancas { display: flex; }
+.oscab-key {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    gap: 3px; padding-bottom: 7px; line-height: 1;
+    transition: transform 0.06s ease, background 0.06s ease;
 }
-.oscab-pad.on .oscab-pad-k, .oscab-pad:active .oscab-pad-k { color: rgba(0, 0, 0, 0.6); }
+.oscab-key.blanca {
+    width: var(--kw); height: var(--kh);
+    background: #f2f0e6; color: #14141f;
+    box-shadow: inset 0 0 0 2px #000, 0 4px 0 #000;
+}
+.oscab-key.negra {
+    position: absolute; top: 0; z-index: 2;
+    left: calc(var(--kw) * var(--n) - var(--kw) * 0.32);
+    width: calc(var(--kw) * 0.64); height: calc(var(--kh) * 0.62);
+    background: #14141f; color: #f2f0e6;
+    box-shadow: inset 0 0 0 2px #000, 0 4px 0 #000;
+}
+.oscab-key-n { font-size: clamp(12px, 1.5vw, 15px); }
+.oscab-key.negra .oscab-key-n { display: none; }   /* no cabe: solo la letra */
+.oscab-key-k { font-size: 12px; opacity: 0.5; text-transform: uppercase; }
+.oscab-key:focus-visible { outline: 3px solid var(--highlight); outline-offset: -3px; }
+.oscab-key.blanca.on, .oscab-key.blanca:active { background: var(--highlight); transform: translateY(3px); }
+.oscab-key.negra.on, .oscab-key.negra:active { background: var(--highlight); color: #14141f; transform: translateY(3px); }
+.oscab-key.on .oscab-key-k, .oscab-key:active .oscab-key-k { opacity: 0.75; }
 
-/* subir y bajar la escala entera (tambien con las teclas Z / X) */
+/* subir y bajar la octava (tambien con las teclas Z / X) */
 .oscab-oct { display: flex; align-items: center; gap: 10px; }
 .oscab-octbtn {
     font-size: 16px; line-height: 1; padding: 4px 10px 6px;
@@ -108,6 +97,21 @@
 .oscab-octbtn:disabled { opacity: 0.28; cursor: default; }
 .oscab-octlbl { font-size: 15px; color: var(--dim); }
 .oscab-octn { color: var(--highlight); font-weight: normal; }
+
+/* pestañas: presets o efectos, nunca los dos a la vez */
+.oscab-tabs { display: flex; gap: 6px; }
+.oscab-tab {
+    font-size: 18px; line-height: 1; padding: 4px 18px 6px;
+    color: var(--dim); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.22);
+    transition: color 0.15s ease;
+}
+.oscab-tab:hover, .oscab-tab:focus-visible { color: var(--highlight); outline: none; }
+.oscab-tab.on {
+    background: var(--highlight); color: #000; box-shadow: none;
+    clip-path: polygon(0 12%, 97% 0, 100% 90%, 3% 100%);
+}
+.oscab-panel { display: flex; justify-content: center; width: 100%; }
+.oscab-panel.hidden { display: none; }
 
 /* presets: un clic y suena otra cosa */
 .oscab-presets { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 12px; }
@@ -251,5 +255,4 @@
     .oscab-pname { flex: 1 1 100%; }
     .oscab-pname em { display: inline; margin-left: 6px; }
     .oscab-pnum { flex: 0 0 76px; }
-    .oscab-sec { font-size: 15px; letter-spacing: 0.16em; }
 }

@@ -8,12 +8,12 @@ portfolio audiovisual: un carrusel de videos a pantalla completa con una telita 
 - **esquinas**: "menú" (arriba-izquierda), "la diega" (arriba-derecha) y la ficha técnica (abajo-izquierda) abren el menú.
 - **navegación del video**: interfaz desperdigada que aparece al mover el ratón (escritorio) o tocar el centro (móvil), con cada elemento entrando desde un sitio aleatorio: play/pause gigante en el centro, flechas pixel a los lados, barra de vida segmentada abajo, y auto · sound como pegatinas a la derecha. La ficha técnica lleva un contador (3/12) con flechitas al hacer hover. En móvil, **deslizar** a un lado o al otro cambia de video (con vibración); tocar los tercios laterales también, y el centro enseña/esconde la interfaz. Si tocas un video, se ignora su bucle start/finish y se reproduce entero.
 - **menú**: a pantalla completa sobre el video difuminado, con los items entrando y saliendo volados: home, categorías (un carrusel solo de esa categoría), proyectos sueltos (solo ese video, sin carrusel) y about (ficha de personaje con stats). Al abrirlo marca dónde estás: el video que suena detrás va en amarillo con la manita, y la sección de la que vienes, subrayada. (La gestoría está apagada: su bloque en `data.json` se llama `_gestoria_apagada`; renombrarlo a `gestoria` la devuelve al menú.)
-- **about-sintetizador**: la ficha esconde un sinte de verdad ("encender el sinte"), repartido en bloques con rótulo para que se entienda el orden:
-  - **toca** — pads con las 11 notas de la pentatónica (dedo, ratón o teclado A–Ñ) y **◀ Z / X ▶ para subir y bajar la escala una octava** (la1–la5 en total). Arriba, el osciloscopio cruza la pantalla y se arrastra como un theremin.
-  - **suena a** — presets (nave · campana · coro · goma · chunda): un clic y cambian onda, filtro, voces, efectos, drone y arpegio de golpe.
-  - **retoca** — tres potes: onda / nota / filtro.
-  - **efectos** — el nombre del módulo enciende y apaga el efecto, los "···" abren sus ajustes (en cristiano, con el nombre técnico debajo). Voces no es un efecto: su chip dice cuántas hay y abre sus ajustes.
-  - **sonido** — volumen, chip "drone" (siempre sonando ↔ solo al tocar) y chip "canción", que mutea/recupera el video de fondo.
+- **about-sintetizador**: la ficha esconde un sinte de verdad ("encender el sinte"), de arriba abajo:
+  - dos potes: **tipo de onda** y **filtro** (arrastrar arriba y abajo, o rueda del ratón).
+  - **presets / efectos** en pestañas, se ve una u otra. Presets: drone · nave · campana · coro · goma · chunda — un clic y cambian onda, filtro, voces, efectos, drone y arpegio de golpe. Efectos: el nombre del módulo lo enciende y los "···" abren sus ajustes (en cristiano, con el nombre técnico debajo).
+  - **teclado** de una octava de do a do, con sus negras. Se toca con el dedo, el ratón (arrastrando hace glissando) o el teclado del ordenador: blancas en `A S D F G H J K`, negras en `W E · T Y U`. **◀ Z / X ▶** cambian de octava (do2 a do6).
+  - **volumen** y el chip **"canción"**, que mutea/recupera el video de fondo. Al abrir el sinte, la canción baja sola de volumen para poder tocar encima.
+  - arriba del todo, el osciloscopio cruza la pantalla y se arrastra como un theremin.
 - **detallitos**: cursor de manita pixel, sfx estilo consola ligados al toggle sound, título gigante letra a letra al cambiar de video, y barrido diagonal (siempre al navegar desde el menú; 1 de cada 4 en el avance automático). El barrido va en dos tiempos: tapa la pantalla, el video cambia debajo —esperando a que tenga imagen, para que nunca se vea negro— y se retira.
 - **encaje**: video vertical en pantalla horizontal → centrado con el mismo video borroso detrás; video horizontal en móvil → recorte central.
 

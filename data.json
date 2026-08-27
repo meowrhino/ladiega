@@ -12,9 +12,9 @@
       "projects": [
         {
           "slug": "menudas-piezas",
-          "title": "MENUDAS PIEZAS RUBIA PLATINO",
+          "title": "MENUDAS PIEZAS OST",
           "role": "Music",
-          "studio": "Menudas Piezas' OST",
+          "studio": "",
           "videoPath": "data/projects/menudasPiezas/video.webm",
           "start": 0,
           "finish": null,
@@ -37,12 +37,11 @@
           "title": "AMOR BUTANO",
           "role": "",
           "studio": "",
-          "videoPath": "",
+          "videoPath": "data/projects/amorButano/video.webm",
           "start": 0,
           "finish": null,
-          "highlight": false,
-          "visible": false,
-          "_nota": "añade el video en data/projects/amorButano/video.webm, pon videoPath y visible true"
+          "highlight": true,
+          "visible": true
         }
       ]
     },
@@ -74,7 +73,7 @@
         },
         {
           "slug": "pull-and-bear",
-          "title": "PULL&BEAR DREAM VALLEY",
+          "title": "PULL&BEAR",
           "role": "Sound Design",
           "studio": "Vampire Studio",
           "videoPath": "data/projects/pullAndBear/video.webm",
@@ -85,7 +84,7 @@
         },
         {
           "slug": "massimo-dutti",
-          "title": "MASSIMO DUTTI JEANS X JEANS",
+          "title": "MASSIMO DUTTI",
           "role": "Music & Sound Design",
           "studio": "",
           "videoPath": "data/projects/massimoDutti/video.webm",
@@ -96,7 +95,7 @@
         },
         {
           "slug": "nike",
-          "title": "NIKE SNEAKERVILLE",
+          "title": "NIKE",
           "role": "Music & Sound Design",
           "studio": "",
           "videoPath": "data/projects/nike/video.webm",
@@ -107,7 +106,7 @@
         },
         {
           "slug": "adolfo-dominguez",
-          "title": "ADOLFO DOMÍNGUEZ INSPIRA SS23",
+          "title": "ADOLFO DOMÍNGUEZ",
           "role": "Music",
           "studio": "Lexa",
           "videoPath": "data/projects/adolfoDominguez/video.webm",
@@ -118,7 +117,7 @@
         },
         {
           "slug": "pacsun",
-          "title": "PACSUN THE GAME",
+          "title": "PACSUN",
           "role": "Music",
           "studio": "",
           "videoPath": "data/projects/pacsun/video.webm",
@@ -129,7 +128,7 @@
         },
         {
           "slug": "timberland",
-          "title": "TIMBERLAND FUTURE73",
+          "title": "TIMBERLAND",
           "role": "Music & Sound Design",
           "studio": "",
           "videoPath": "data/projects/timberland/video.webm",
@@ -140,7 +139,7 @@
         },
         {
           "slug": "loewe",
-          "title": "LOEWE SQUEEZE BAG",
+          "title": "LOEWE",
           "role": "Sound Design / Music",
           "studio": "",
           "videoPath": "data/projects/loewe/video.webm",

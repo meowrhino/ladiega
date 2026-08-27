@@ -1,16 +1,16 @@
 // la diega — ABOUT: la ficha de la diega es un sintetizador de verdad.
 // En reposo se ven los stats (musica / diseño sonoro / papeleo). Al pulsar
-// "encender el sinte" aparece: los pads de la pentatonica (se tocan con el
-// dedo, el raton o el teclado A–Ñ), los presets, tres potes (onda, nota,
-// filtro), cinco modulos —el nombre enciende el efecto, los "···" abren sus
-// ajustes—, el volumen, el chip "drone" y el de la cancion del video.
-// La onda tambien se arrastra como un theremin y el espacio mantiene la nota.
+// "encender el sinte" aparece, de arriba abajo: dos potes (onda y filtro),
+// presets / efectos (una pestaña u otra), el teclado de una octava de do a
+// do —con las negras, y Z / X para cambiar de octava— y el volumen con el
+// chip de la cancion. La onda de arriba se arrastra como un theremin y el
+// espacio mantiene la nota. Al abrirlo, la cancion del video se baja.
 // El overlay se inyecta desde aqui, no existe en index.html.
 // El motor de audio vive en synth.js.
 
 import { playSfx, sound } from './audio.js';
 import * as synth from './synth.js';
-import { curSlide, getMode, applySound } from './carousel.js';
+import { curSlide, getMode, applySound, duckSound } from './carousel.js';
 import { SYNTH, WAVES, ARP_PATRONES } from './synth.js';
 
 const ABOUT_STATS = [
@@ -52,12 +52,24 @@ const MODULES = {
 // modulos que no son efectos: sin interruptor ON/OFF en su modal
 const SIN_TOGGLE = { voces: true };
 
-// teclas del teclado para los diez primeros pads (el once solo se toca)
-const KEYS = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'ñ'];
+// teclado de piano: una octava de do a do. Las blancas en la fila de casa
+// (A S D F G H J K) y las negras encima (W E · T Y U), como en cualquier
+// secuenciador. El paso es el semitono, 0 = do
+const TECLA_PASO = { a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12 };
+const PASO_TECLA = ['a', 'w', 's', 'e', 'd', 'f', 't', 'g', 'y', 'h', 'u', 'j', 'k'];
+// cuantas blancas quedan a la izquierda de cada negra (para colocarlas)
+const NEGRA_HUECO = { 1: 1, 3: 2, 6: 4, 8: 5, 10: 6 };
 
 // presets: un clic y cambia todo de golpe. Es la puerta de entrada — nadie
 // descubre un sinte moviendo potes de uno en uno.
 const PRESETS = [
+    { label: 'drone', arp: false, s: {
+        wave: 1, filter: 7, drone: true,
+        voices:  { n: 2, detune: 8 },
+        chorus:  { on: false },
+        flanger: { on: false },
+        reverb:  { on: true, time: 2.6, predelay: 20, mix: 0.3 }
+    }},
     { label: 'nave', arp: false, s: {
         wave: 2, filter: 6, drone: true,
         voices:  { n: 3, detune: 18 },
@@ -100,6 +112,7 @@ const PRESETS = [
 
 let aboutData = {};
 let oscOverlay = null;
+let sueltaTeclaDoc = null;   // el listener de soltar tecla que hay puesto ahora
 const oscAnim = { on: false, raf: null, phase: 0 };
 
 export function setAboutData(d) { aboutData = d || {}; }
@@ -195,56 +208,62 @@ function renderAbout(about) {
     const presets = PRESETS.map((p, i) =>
         '<button class="oscab-preset" data-preset="' + i + '">' + p.label + '</button>').join('');
 
-    // pads: las 11 notas de la pentatonica, para tocar con el dedo o el raton
-    // (los diez primeros llevan ademas su tecla del teclado)
-    let pads = '';
-    for (let i = 0; i <= 10; i++) {
-        pads += '<button class="oscab-pad" data-i="' + i + '">' +
-            '<span class="oscab-pad-n">' + synth.noteLabel(i) + '</span>' +
-            '<span class="oscab-pad-k">' + (KEYS[i] || '·') + '</span>' +
-        '</button>';
+    // teclado: las blancas en fila y las negras encima, colocadas en el hueco
+    // que les toca. Cada tecla lleva su nota y su letra del teclado
+    let blancas = '';
+    let negras = '';
+    for (let i = 0; i <= synth.PASOS; i++) {
+        const tecla = '<span class="oscab-key-n"></span>' +
+            '<span class="oscab-key-k">' + PASO_TECLA[i] + '</span>';
+        if (synth.esNegra(i)) {
+            negras += '<button class="oscab-key negra" data-i="' + i + '"' +
+                ' style="--n:' + NEGRA_HUECO[i] + '">' + tecla + '</button>';
+        } else {
+            blancas += '<button class="oscab-key blanca" data-i="' + i + '">' + tecla + '</button>';
+        }
     }
+    const teclado =
+        '<div class="oscab-piano">' +
+            '<div class="oscab-blancas">' + blancas + '</div>' + negras +
+        '</div>' +
+        '<div class="oscab-oct">' +
+            '<button class="oscab-octbtn" data-d="-1" aria-label="bajar una octava">◀ Z</button>' +
+            '<span class="oscab-octlbl">octava <b class="oscab-octn"></b></span>' +
+            '<button class="oscab-octbtn" data-d="1" aria-label="subir una octava">X ▶</button>' +
+        '</div>';
 
     let vol = '';
     for (let i = 0; i < 8; i++) vol += '<span class="oscab-vseg"></span>';
 
-    // cada trozo del sinte va en su bloque, con un rotulo que dice para que
-    // sirve: sin eso era una pila de botones sueltos sin orden aparente
-    const bloque = (rotulo, pista, dentro) =>
-        '<div class="oscab-block">' +
-            '<span class="oscab-sec">' + rotulo +
-                (pista ? '<em>' + pista + '</em>' : '') + '</span>' +
-            dentro +
-        '</div>';
+    const bloque = dentro => '<div class="oscab-block">' + dentro + '</div>';
 
+    // orden: potes → presets/efectos (una pestaña u otra) → teclado → volumen
     return '<div class="oscab">' +
         '<div class="oscab-wave">' + wave + '</div>' +
         '<canvas class="oscab-scope" width="640" height="140"></canvas>' +
-        '<div class="oscab-hint">arrastra la onda de lado a lado, como un theremin</div>' +
         '<div class="oscab-head">' +
             '<div class="oscab-name">' + (about.name || 'la diega') + '</div>' +
             '<div class="oscab-role">' + (about.clase || '') + '</div>' +
         '</div>' +
         '<div class="oscab-desk">' + stats + '</div>' +
-        bloque('toca', 'con el dedo, el ratón o el teclado A–Ñ',
-            '<div class="oscab-pads">' + pads + '</div>' +
-            '<div class="oscab-oct">' +
-                '<button class="oscab-octbtn" data-d="-1" aria-label="bajar una octava">◀ Z</button>' +
-                '<span class="oscab-octlbl">octava <b class="oscab-octn"></b></span>' +
-                '<button class="oscab-octbtn" data-d="1" aria-label="subir una octava">X ▶</button>' +
+        bloque('<div class="oscab-pots">' + pot('wave', 'tipo de onda') + pot('filter', 'filtro') + '</div>') +
+        bloque(
+            '<div class="oscab-tabs">' +
+                '<button class="oscab-tab on" data-tab="presets">presets</button>' +
+                '<button class="oscab-tab" data-tab="efectos">efectos</button>' +
+            '</div>' +
+            '<div class="oscab-panel" data-panel="presets">' +
+                '<div class="oscab-presets">' + presets + '</div>' +
+            '</div>' +
+            '<div class="oscab-panel hidden" data-panel="efectos">' +
+                '<div class="oscab-mods">' + mods + '</div>' +
             '</div>') +
-        bloque('suena a', 'un clic y cambia todo',
-            '<div class="oscab-presets">' + presets + '</div>') +
-        bloque('retoca', 'arrastra arriba y abajo',
-            '<div class="oscab-pots">' + pot('wave', 'tipo de onda') + pot('note', 'nota') + pot('filter', 'filtro') + '</div>') +
-        bloque('efectos', 'el nombre lo enciende · los ··· lo ajustan',
-            '<div class="oscab-mods">' + mods + '</div>') +
-        bloque('sonido', '',
+        bloque(teclado) +
+        bloque(
             '<div class="oscab-vol">' +
                 '<button class="oscab-vbtn" data-d="-1" aria-label="bajar volumen">−</button>' +
                 '<span class="oscab-vmeter">' + vol + '</span>' +
                 '<button class="oscab-vbtn" data-d="1" aria-label="subir volumen">+</button>' +
-                '<button class="oscab-chip oscab-drone" title="siempre sonando ↔ solo al tocar">drone</button>' +
                 '<button class="oscab-chip oscab-song" title="la canción del video de detrás">canción</button>' +
             '</div>') +
         '<button class="oscab-osc-btn">encender el sinte</button>' +
@@ -370,15 +389,10 @@ function modalAbierto() {
 
 function pintaPotes(ov) {
     const w = ov.querySelector('.oscab-pot[data-p="wave"]');
-    const n = ov.querySelector('.oscab-pot[data-p="note"]');
     const f = ov.querySelector('.oscab-pot[data-p="filter"]');
     if (w) {
         w.querySelector('.oscab-dial').style.setProperty('--a', potAngulo(SYNTH.wave / (WAVES.length - 1)) + 'deg');
         w.querySelector('.oscab-pval').textContent = WAVES[SYNTH.wave].label;
-    }
-    if (n) {
-        n.querySelector('.oscab-dial').style.setProperty('--a', potAngulo(SYNTH.note / 10) + 'deg');
-        n.querySelector('.oscab-pval').textContent = synth.noteLabel(SYNTH.note) + ' · ' + Math.round(synth.noteHz(SYNTH.note)) + ' Hz';
     }
     if (f) {
         f.querySelector('.oscab-dial').style.setProperty('--a', potAngulo(SYNTH.filter / 10) + 'deg');
@@ -387,24 +401,24 @@ function pintaPotes(ov) {
     }
 }
 
-// el pad encendido es el de la nota que esta sonando; en drone se queda fijo,
-// tocando manda la nota que se esta pulsando
-function pintaPads(ov, tocando) {
+// la tecla encendida es la de la nota que esta sonando; en drone se queda
+// fija, tocando manda la que se esta pulsando
+function pintaTeclas(ov, tocando) {
     const activo = (tocando === undefined || tocando < 0)
         ? (synth.engineOn() && SYNTH.drone ? SYNTH.note : -1)
         : tocando;
-    ov.querySelectorAll('.oscab-pad').forEach(p => p.classList.toggle('on', +p.dataset.i === activo));
+    ov.querySelectorAll('.oscab-key').forEach(p => p.classList.toggle('on', +p.dataset.i === activo));
 }
 
 // la escala entera sube o baja: hay que reetiquetar los pads, el rotulo de
 // octava y el pote de nota, porque todos dicen en que nota estan
 function pintaOctava(ov) {
-    ov.querySelectorAll('.oscab-pad').forEach(p => {
-        const n = p.querySelector('.oscab-pad-n');
+    ov.querySelectorAll('.oscab-key').forEach(p => {
+        const n = p.querySelector('.oscab-key-n');
         if (n) n.textContent = synth.noteLabel(+p.dataset.i);
     });
     const lbl = ov.querySelector('.oscab-octn');
-    if (lbl) lbl.textContent = synth.noteLabel(0) + '–' + synth.noteLabel(10);
+    if (lbl) lbl.textContent = synth.noteLabel(0) + '–' + synth.noteLabel(synth.PASOS);
     ov.querySelectorAll('.oscab-octbtn').forEach(b => {
         const d = +b.dataset.d;
         b.disabled = d < 0 ? SYNTH.oct <= synth.OCT_MIN : SYNTH.oct >= synth.OCT_MAX;
@@ -416,7 +430,7 @@ function cambiaOctava(ov, d) {
     playSfx('move');
     pintaOctava(ov);
     pintaPotes(ov);
-    pintaPads(ov);
+    pintaTeclas(ov);
     if (!SYNTH.drone && !synth.isArpOn()) synth.playNote(SYNTH.note, 450);
 }
 
@@ -443,11 +457,9 @@ function aplicaPreset(ov, i) {
     // que se oiga al momento: si no hay drone ni arpegio, una nota de muestra
     if (!SYNTH.drone && !p.arp) synth.playNote(SYNTH.note, 700);
     pintaPotes(ov);
-    pintaPads(ov);
+    pintaTeclas(ov);
     refreshMods(ov);
     marcaPreset(ov, i);
-    const dr = ov.querySelector('.oscab-drone');
-    if (dr) dr.classList.toggle('on', SYNTH.drone);
 }
 
 // el chip de la cancion siempre refleja lo que suena de verdad
@@ -457,21 +469,16 @@ function syncSongChip() {
     if (chip) chip.classList.toggle('on', !curSlide().video.muted && !curSlide().video.paused);
 }
 
-// mover un pote: la frecuencia toca una nota (se oye lo que ajustas),
-// el cambio de onda tambien suena, el filtro solo se aplica
+// mover un pote: al cambiar de onda suena una nota para oir el cambio;
+// el filtro se aplica sin mas (ya se nota en lo que este sonando)
 function setPot(ov, key, v) {
     const max = key === 'wave' ? WAVES.length - 1 : 10;
     v = Math.max(0, Math.min(max, Math.round(v)));
     if (v === SYNTH[key]) return;
-    if (key === 'note') {
-        synth.playNote(v);
-    } else {
-        SYNTH[key] = v;
-        synth.applyParams();
-        if (key === 'wave') synth.playNote(SYNTH.note);
-    }
+    SYNTH[key] = v;
+    synth.applyParams();
+    if (key === 'wave' && !SYNTH.drone && !synth.isArpOn()) synth.playNote(SYNTH.note);
     pintaPotes(ov);
-    pintaPads(ov);
     marcaPreset(ov, -1);
 }
 
@@ -499,7 +506,7 @@ function wireAbout(ov) {
             synth.startEngine();
             oscAnimStart(ov);
         }
-        pintaPads(ov);
+        pintaTeclas(ov);
         refreshMods(ov);
     });
 
@@ -521,33 +528,58 @@ function wireAbout(ov) {
         b.addEventListener('click', () => aplicaPreset(ov, +b.dataset.preset));
     });
 
-    // pads: la pentatonica para tocar con el dedo o el raton
-    ov.querySelectorAll('.oscab-pad').forEach(p => {
+    // presets o efectos: se ve una pestaña o la otra
+    ov.querySelectorAll('.oscab-tab').forEach(t => {
+        t.addEventListener('click', () => {
+            playSfx('move');
+            ov.querySelectorAll('.oscab-tab').forEach(o => o.classList.toggle('on', o === t));
+            ov.querySelectorAll('.oscab-panel').forEach(p =>
+                p.classList.toggle('hidden', p.dataset.panel !== t.dataset.tab));
+        });
+    });
+
+    // teclado: se toca con el dedo o el raton, y arrastrando se hace glissando
+    let tocandoTecla = -1;
+    const sueltaTecla = () => {
+        if (tocandoTecla < 0) return;
+        tocandoTecla = -1;
+        if (synth.engineOn()) synth.noteOff();
+        pintaTeclas(ov);
+    };
+    const pulsa = i => {
+        if (!synth.engineOn() || i === tocandoTecla) return;
+        tocandoTecla = i;
+        synth.noteOn(i);
+        pintaTeclas(ov, i);
+    };
+    ov.querySelectorAll('.oscab-key').forEach(p => {
         const i = +p.dataset.i;
-        const suelta = () => {
-            if (!synth.engineOn()) return;
-            synth.noteOff();
-            pintaPads(ov);
-        };
         p.addEventListener('pointerdown', e => {
             e.preventDefault();
-            if (!synth.engineOn()) return;
-            try { p.setPointerCapture(e.pointerId); } catch (_) {}
-            synth.noteOn(i);
-            pintaPads(ov, i);
-            pintaPotes(ov);
+            pulsa(i);
         });
-        p.addEventListener('pointerup', suelta);
-        p.addEventListener('pointercancel', suelta);
-        // con el pad enfocado, Enter tambien toca (el espacio ya esta cogido)
+        // arrastrar por encima toca lo que pilla (el raton, con el boton dado)
+        p.addEventListener('pointerenter', e => {
+            if (e.buttons && tocandoTecla >= 0) pulsa(i);
+        });
+        // con la tecla enfocada, Enter tambien toca (el espacio ya esta cogido)
         p.addEventListener('keydown', e => {
             if (e.key !== 'Enter' || !synth.engineOn()) return;
             synth.playNote(i, 400);
-            pintaPads(ov, i);
-            setTimeout(() => pintaPads(ov), 400);
+            pintaTeclas(ov, i);
+            setTimeout(() => pintaTeclas(ov), 400);
         });
     });
-    pintaPads(ov);
+    // el dedo puede levantarse fuera del teclado, asi que escucha el documento;
+    // wireAbout corre en cada apertura, por eso hay que quitar el de la anterior
+    if (sueltaTeclaDoc) {
+        document.removeEventListener('pointerup', sueltaTeclaDoc);
+        document.removeEventListener('pointercancel', sueltaTeclaDoc);
+    }
+    sueltaTeclaDoc = sueltaTecla;
+    document.addEventListener('pointerup', sueltaTeclaDoc);
+    document.addEventListener('pointercancel', sueltaTeclaDoc);
+    pintaTeclas(ov);
 
     // subir y bajar la escala entera
     ov.querySelectorAll('.oscab-octbtn').forEach(b => {
@@ -565,17 +597,6 @@ function wireAbout(ov) {
             paintVol();
             playSfx('move');
         });
-    });
-
-    // drone: alterna entre "siempre sonando" y "solo al tocar"
-    const droneBtn = ov.querySelector('.oscab-drone');
-    const paintDrone = () => droneBtn.classList.toggle('on', SYNTH.drone);
-    paintDrone();
-    droneBtn.addEventListener('click', () => {
-        synth.setDrone(!SYNTH.drone);
-        paintDrone();
-        pintaPads(ov);
-        playSfx('move');
     });
 
     // mutear / recuperar la cancion del video que suena detras
@@ -616,22 +637,20 @@ function wireAbout(ov) {
     // theremin: arrastrar por el osciloscopio toca la escala de lado a lado
     const cv = ov.querySelector('.oscab-scope');
     let toca = false;
-    const stepAt = e => (e.clientX / window.innerWidth) * 10;
+    const stepAt = e => (e.clientX / window.innerWidth) * synth.PASOS;
     cv.addEventListener('pointerdown', e => {
         if (!synth.engineOn()) return;
         toca = true;
         try { cv.setPointerCapture(e.pointerId); } catch (_) {}
         synth.noteOn(stepAt(e));
-        pintaPotes(ov);
-        pintaPads(ov, SYNTH.note);
+        pintaTeclas(ov, SYNTH.note);
     });
     cv.addEventListener('pointermove', e => {
         if (!toca) return;
         synth.noteGlide(stepAt(e));
-        pintaPotes(ov);
-        pintaPads(ov, SYNTH.note);
+        pintaTeclas(ov, SYNTH.note);
     });
-    const sueltaCv = () => { if (toca) { toca = false; synth.noteOff(); pintaPads(ov); } };
+    const sueltaCv = () => { if (toca) { toca = false; synth.noteOff(); pintaTeclas(ov); } };
     cv.addEventListener('pointerup', sueltaCv);
     cv.addEventListener('pointercancel', sueltaCv);
 }
@@ -645,7 +664,7 @@ function bindTeclado() {
         if (!oscOverlay || oscOverlay.classList.contains('hidden') || !synth.engineOn()) return;
         if (e.key === ' ') {
             e.preventDefault();
-            if (!e.repeat) { synth.noteOn(SYNTH.note); pintaPads(oscOverlay, SYNTH.note); }
+            if (!e.repeat) { synth.noteOn(SYNTH.note); pintaTeclas(oscOverlay, SYNTH.note); }
             return;
         }
         const k = e.key.toLowerCase();
@@ -655,24 +674,22 @@ function bindTeclado() {
             if (!e.repeat) cambiaOctava(oscOverlay, k === 'x' ? 1 : -1);
             return;
         }
-        const i = KEYS.indexOf(k);
-        if (i < 0 || e.repeat) return;
+        const i = TECLA_PASO[k];
+        if (i === undefined || e.repeat) return;
         teclas.add(k);
         synth.noteOn(i);
-        pintaPotes(oscOverlay);
-        pintaPads(oscOverlay, i);   // el pad se enciende tambien desde el teclado
+        pintaTeclas(oscOverlay, i);   // la tecla se enciende tambien desde el teclado
     });
     document.addEventListener('keyup', e => {
         if (!oscOverlay || oscOverlay.classList.contains('hidden') || !synth.engineOn()) { teclas.clear(); return; }
-        if (e.key === ' ') { synth.noteOff(); pintaPads(oscOverlay); return; }
+        if (e.key === ' ') { synth.noteOff(); pintaTeclas(oscOverlay); return; }
         if (!teclas.delete(e.key.toLowerCase())) return;
-        if (!teclas.size) { synth.noteOff(); pintaPads(oscOverlay); }
+        if (!teclas.size) { synth.noteOff(); pintaTeclas(oscOverlay); }
         else {
             // legato: al soltar una tecla vuelve la ultima que siga pulsada
-            const i = KEYS.indexOf([...teclas][teclas.size - 1]);
+            const i = TECLA_PASO[[...teclas][teclas.size - 1]];
             synth.noteOn(i);
-            pintaPotes(oscOverlay);
-            pintaPads(oscOverlay, i);
+            pintaTeclas(oscOverlay, i);
         }
     });
 }
@@ -709,6 +726,7 @@ export function aboutEscape() {
 
 export function closeOscAbout() {
     if (!oscOverlay) return;
+    duckSound(false);
     oscAnimStop();
     oscOverlay.classList.add('hidden');
     document.body.classList.remove('overlay-open');
@@ -722,6 +740,7 @@ export function openOscAbout() {
     ov.querySelector('.osc-inner').innerHTML = renderAbout(aboutData);
     oscAnimStop();
     wireAbout(ov);
+    duckSound(true);   // la cancion de fondo se aparta para poder tocar encima
     document.body.classList.add('overlay-open');
     playSfx('select');
 }

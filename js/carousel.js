@@ -100,6 +100,12 @@ function setupSlides() {
     });
 }
 
+// con el sinte abierto la cancion del video se aparta a un segundo plano,
+// para poder tocar encima sin que se peleen (el chip "cancion" sigue mandando)
+export function duckSound(bajito) {
+    slides.forEach(s => { s.video.volume = bajito ? 0.18 : 1; });
+}
+
 // refleja el estado real del sonido en los videos y en el boton (que asi no miente)
 export function applySound() {
     const on = isAudible();

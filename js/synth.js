@@ -11,26 +11,28 @@ export const WAVES = [
     { type: 'square',   label: 'cuadrada' }
 ];
 
-// escala pentatonica: caiga donde caiga el pote, siempre suena afinado
-const PENTA = [0, 3, 5, 7, 10];
-
-// los once pasos cubren dos octavas; OCT las desplaza enteras (teclas Z / X)
-export const OCT_MIN = -1;
+// teclado de verdad: una octava cromatica de do a do (13 pasos, 0 = do).
+// La octava en la que cae se mueve entera con SYNTH.oct (teclas Z / X)
+export const PASOS = 12;          // el paso 12 es el do de arriba
+export const OCT_MIN = -2;
 export const OCT_MAX = 2;
+const DO4 = 261.6255653;          // do central
 
 export function noteHz(step) {
-    const s = Math.max(0, Math.min(10, Math.round(step)));
-    return 110 * Math.pow(2, (PENTA[s % 5] + (Math.floor(s / 5) + SYNTH.oct) * 12) / 12);
+    const s = Math.max(-12, Math.min(24, Math.round(step)));
+    return DO4 * Math.pow(2, SYNTH.oct + s / 12);
 }
 
-const NOTA_NOMBRE = ['la', 'do', 're', 'mi', 'sol'];
+const NOTA_NOMBRE = ['do', 'do#', 're', 're#', 'mi', 'fa', 'fa#', 'sol', 'sol#', 'la', 'la#', 'si'];
 
-// el numero es la octava de verdad: la pentatonica empieza en la, y el do
-// que va detras ya pertenece a la octava siguiente (la2 · do3 · re3...)
 export function noteLabel(step) {
-    const s = Math.max(0, Math.min(10, Math.round(step)));
-    const dentro = s % 5;
-    return NOTA_NOMBRE[dentro] + (2 + SYNTH.oct + Math.floor(s / 5) + (dentro ? 1 : 0));
+    const s = Math.max(0, Math.min(PASOS, Math.round(step)));
+    return NOTA_NOMBRE[s % 12] + (4 + SYNTH.oct + Math.floor(s / 12));
+}
+
+// true = tecla negra (las que se dibujan encima, entre las blancas)
+export function esNegra(step) {
+    return [1, 3, 6, 8, 10].indexOf(step % 12) !== -1;
 }
 
 // sube o baja la escala entera. Devuelve false si ya estaba en el tope
@@ -48,11 +50,12 @@ export function filterHz(step) {
     return Math.round(150 * Math.pow(12000 / 150, s / 10));
 }
 
+// en semitonos sobre la nota que este puesta: acorde mayor, siempre afinado
 export const ARP_PATRONES = [
-    { label: 'subida', pasos: [0, 2, 4, 6] },
-    { label: 'bajada', pasos: [6, 4, 2, 0] },
-    { label: 'vaiven', pasos: [0, 2, 4, 2] },
-    { label: 'salto',  pasos: [0, 4, 1, 5] }
+    { label: 'subida', pasos: [0, 4, 7, 12] },
+    { label: 'bajada', pasos: [12, 7, 4, 0] },
+    { label: 'vaiven', pasos: [0, 4, 7, 4] },
+    { label: 'salto',  pasos: [0, 7, 4, 12] }
 ];
 
 const MAX_VOICES = 5;
@@ -61,7 +64,7 @@ const RELEASE = 0.3;   // release fijo al soltar una nota (el ataque si es edita
 // estado del sinte: lo editan los potes y los modales; persiste entre visitas al about
 export const SYNTH = {
     wave: 0,
-    note: 10,
+    note: 0,
     oct: 0,        // desplazamiento de la escala entera, OCT_MIN..OCT_MAX
     filter: 10,
     drone: true,   // true = siempre sonando · false = solo al tocar (teclas / arpegio)
@@ -276,7 +279,7 @@ export function rebuildReverb() {
    release corto fijo. En drone la nota solo cambia la altura. */
 
 export function noteOn(step) {
-    SYNTH.note = Math.max(0, Math.min(10, Math.round(step)));
+    SYNTH.note = Math.max(0, Math.min(PASOS, Math.round(step)));
     if (!engine || arp.on) return;
     clearTimeout(autoOff);
     const t = engine.ctx.currentTime, g = engine.env.gain;
@@ -308,7 +311,7 @@ export function playNote(step, hold = 350) {
 
 // glissando del theremin: cambia la nota sin redisparar la envolvente
 export function noteGlide(step) {
-    SYNTH.note = Math.max(0, Math.min(10, Math.round(step)));
+    SYNTH.note = Math.max(0, Math.min(PASOS, Math.round(step)));
     if (!engine || arp.on) return;
     setFreq(noteHz(SYNTH.note), true);
 }
@@ -323,7 +326,7 @@ export function arpStart() {
     const paso = () => {
         if (!engine) return;
         const pat = ARP_PATRONES[SYNTH.arp.patron] || ARP_PATRONES[0];
-        const n = Math.max(0, Math.min(10, SYNTH.note - 4 + pat.pasos[arp.i % pat.pasos.length]));
+        const n = SYNTH.note + pat.pasos[arp.i % pat.pasos.length];
         const durMs = Math.max(60, 60000 / SYNTH.arp.bpm);
         const dur = durMs / 1000;
         const atk = Math.min(Math.max(0.001, SYNTH.arp.attack), dur * 0.5);
