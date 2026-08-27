@@ -263,7 +263,10 @@ function showVideo(project, dir = 1, how = 'slide') {
 export function next(fromAuto) {
     if (transitioning || playlist.length < 2) return;
     index = (index + 1) % playlist.length; // al llegar al final vuelve al principio
-    showVideo(playlist[index], 1, fromAuto && Math.random() < 0.25 ? 'wipe' : 'slide');
+    // cuando el video se acaba solo, siempre barrido: es un corte que no ha
+    // pedido nadie y conviene que se vea. Con las flechas o deslizando manda
+    // el desplazamiento lateral, que ahi la direccion es la respuesta al gesto
+    showVideo(playlist[index], 1, fromAuto ? 'wipe' : 'slide');
 }
 
 export function prev() {

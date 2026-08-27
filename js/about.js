@@ -62,6 +62,10 @@ function renderAbout(about) {
         renderCabecera(about.name || 'la diega', about.clase) +
         '<div class="oscab-desk">' + stats + '</div>' +
         sui.renderSynth() +
+        // quien ha hecho la web, al final del todo
+        '<div class="oscab-firma">web: ' +
+            '<a href="https://meowrhino.studio" target="_blank" rel="noopener">meowrhino.studio</a>' +
+        '</div>' +
     '</div>' +
     sui.renderSynthModal();
 }

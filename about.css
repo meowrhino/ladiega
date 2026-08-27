@@ -193,7 +193,7 @@
 
 /* ===== Modal de cada modulo ===== */
 .oscab-modal {
-    position: fixed; inset: 0; z-index: 70;
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 70;
     display: flex; align-items: center; justify-content: center;
     background: rgba(4, 4, 14, 0.72); padding: 20px;
 }
@@ -288,4 +288,27 @@
     outline: none;
     transform: rotate(1.5deg) scale(1.06);
     box-shadow: 3px 3px 0 #000;
+}
+
+/* firma de quien ha hecho la web, al pie del about */
+.oscab-firma {
+    margin-top: 4px;
+    padding: 0 16px 4px;
+    font-size: 16px;
+    color: var(--dim);
+    text-align: center;
+}
+
+.oscab-firma a {
+    color: var(--text);
+    text-decoration: none;
+    box-shadow: inset 0 -2px 0 var(--highlight);
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.oscab-firma a:hover,
+.oscab-firma a:focus-visible {
+    background: var(--highlight);
+    color: #000;
+    outline: none;
 }
