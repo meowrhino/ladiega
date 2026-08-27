@@ -1,0 +1,14 @@
+{
+  // Sitio estático en Cloudflare Workers. Sin esto, wrangler se inventa la
+  // configuración en cada build y no queda registrada en ningún sitio.
+  //
+  // "directory": "." → la web se sirve desde la raíz del repo, porque no hay
+  // paso de compilación: index.html, los css, js/ y data/ son el sitio.
+  // Lo que no debe subirse va en .assetsignore.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "web",
+  "compatibility_date": "2026-08-26",
+  "assets": {
+    "directory": "."
+  }
+}

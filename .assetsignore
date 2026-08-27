@@ -1,0 +1,10 @@
+# Lo que NO se sube a Cloudflare (mismo formato que .gitignore).
+# El sitio es la raíz del repo, así que hay que apartar lo que es solo del
+# repositorio y no de la web.
+.git
+.gitignore
+.gitattributes
+.assetsignore
+wrangler.jsonc
+README.md
+manus
