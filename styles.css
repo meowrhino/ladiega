@@ -295,23 +295,33 @@ body.controls-open .ficha {
     transform: rotate(-0.7deg);
 }
 
-/* ===== Flechas de carrusel (salen y se esconden con el resto de controles) ===== */
-.edge-arrow {
+/* ===== Flechas de carrusel (salen y se esconden con el resto de controles) =====
+   Su sitio va por ID y en una sola regla, como el resto de controles. Antes
+   el centrado vertical salia de translateY(-50%) metido en --base, o sea de
+   una custom property dentro de transform: eran los dos unicos controles que
+   dependian de eso para colocarse, y los dos unicos que Safari descoloca.
+   Ahora --base solo lleva el ladeo, que si se pierde no mueve nada de sitio. */
+#arrowPrev,
+#arrowNext {
+    position: absolute;
     top: 50%;
     width: 52px;
     height: 64px;
-    background: no-repeat center / 26px auto;
+    margin-top: -32px;          /* la mitad de la altura: centrado sin transform */
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 26px auto;
     filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
 }
 
-.edge-arrow.left {
-    --base: translateY(-50%) rotate(-4deg);
+#arrowPrev {
+    --base: rotate(-4deg);
     left: 12px;
     background-image: url('data/icons/arrow-left.svg');
 }
 
-.edge-arrow.right {
-    --base: translateY(-50%) rotate(4deg);
+#arrowNext {
+    --base: rotate(4deg);
     right: 12px;
     background-image: url('data/icons/arrow-right.svg');
 }
@@ -1010,9 +1020,11 @@ body.title-flight .ficha {
         right: 10px;
     }
 
-    .edge-arrow {
+    #arrowPrev,
+    #arrowNext {
         width: 40px;
         height: 52px;
+        margin-top: -26px;
         background-size: 20px auto;
     }
 
