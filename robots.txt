@@ -1,9 +1,5 @@
-# Repo de verdad (ladiega.com): que se indexe todo.
-# En la COPIA hay que cambiar estas dos lineas por:
-#   User-agent: *
-#   Disallow: /
-# ...para que la copia no compita con el sitio bueno en Google.
+# ESTA ES LA COPIA. El sitio bueno es https://ladiega.com — que Google no
+# indexe esta para que no compitan. (En el repo de la diega, ladiegaog/web,
+# este mismo archivo lleva "Allow: /".)
 User-agent: *
-Allow: /
-
-Sitemap: https://ladiega.com/sitemap.xml
+Disallow: /
