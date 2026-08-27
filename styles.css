@@ -957,14 +957,21 @@ body.title-flight .ficha {
         bottom: calc(48px + env(safe-area-inset-bottom));
     }
 
+    /* dedos, no ratones: la pegatina crece a unos 40px de alto para que se
+       pueda acertar. Con relleno y no con un area invisible, porque el
+       clip-path de la version encendida recortaria cualquier pseudoelemento */
+    .controls .toggle {
+        padding: 8px 16px 10px;
+    }
+
     #autoBtn {
-        bottom: calc(128px + env(safe-area-inset-bottom));
-        right: 12px;
+        bottom: calc(120px + env(safe-area-inset-bottom));
+        right: 6px;
     }
 
     #soundBtn {
-        bottom: calc(84px + env(safe-area-inset-bottom));
-        right: 16px;
+        bottom: calc(68px + env(safe-area-inset-bottom));
+        right: 10px;
     }
 
     .edge-arrow {

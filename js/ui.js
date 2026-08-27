@@ -312,11 +312,18 @@ function bindUI() {
             }
 
             if (Math.abs(dx) > QUIETO || Math.abs(dy) > QUIETO) return;  // ni toque ni deslizamiento
+
+            // Con la interfaz a la vista mandan sus botones y punto: los tercios
+            // laterales se apartan. Si no, auto y sound (que viven a la derecha)
+            // quedan rodeados de zona de "siguiente video" y fallar por un pelo
+            // te cambia de video en vez de tocar el boton. Para navegar con la
+            // interfaz puesta estan las flechas, y deslizar sigue funcionando.
+            if (!controls.classList.contains('faded')) { hideControls(); return; }
+
             const w = window.innerWidth;
             if (puedeNavegar && x0 < w * 0.3) { playSfx('move'); buzz(); carousel.prev(); }
             else if (puedeNavegar && x0 > w * 0.7) { playSfx('move'); buzz(); carousel.next(); }
-            else if (controls.classList.contains('faded')) showControls();
-            else hideControls();
+            else showControls();
         });
     } else {
         window.addEventListener('pointermove', showControls);
