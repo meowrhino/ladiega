@@ -14,13 +14,21 @@ portfolio audiovisual: un carrusel de videos a pantalla completa con una telita 
   - **teclado** de una octava de do a do, con sus negras. Se toca con el dedo, el ratón (arrastrando hace glissando) o el teclado del ordenador: blancas en `A S D F G H J K`, negras en `W E · T Y U`. **◀ Z / X ▶** cambian de octava (do2 a do6).
   - **volumen** y el chip **"canción"**, que mutea/recupera el video de fondo. Al abrir el sinte, la canción baja sola de volumen para poder tocar encima.
   - arriba del todo, el osciloscopio cruza la pantalla y se arrastra como un theremin.
+- **contáctame**: debajo del about en el menú, con la misma pinta pero sin sinte: los enlaces para escribirle y, debajo, la gestoría. Todo se edita en la clave `contacto` de `data.json` — los enlaces que dejes con el `valor` vacío no se pintan.
 - **detallitos**: cursor de manita pixel, sfx estilo consola ligados al toggle sound, título gigante letra a letra al cambiar de video, y barrido diagonal (siempre al navegar desde el menú; 1 de cada 4 en el avance automático). El barrido va en dos tiempos: tapa la pantalla, el video cambia debajo —esperando a que tenga imagen, para que nunca se vea negro— y se retira.
 - **encaje**: video vertical en pantalla horizontal → centrado con el mismo video borroso detrás; video horizontal en móvil → recorte central.
 
 ## estructura
 
 - `index.html` / `styles.css` / `about.css` — maqueta y estilos (el about-sintetizador tiene su propia hoja)
-- `js/` — el código en módulos: `main.js` (arranque), `audio.js` (AudioContext compartido + sfx + intención de sonido), `carousel.js` (slides, transiciones, vistas y ficha), `ui.js` (menú, controles y listeners globales), `synth.js` (motor de audio del sinte) y `about.js` (interfaz del about-sintetizador)
+- `js/` — el código en módulos:
+  - `main.js` — arranque: carga `data.json` (y avisa en pantalla si falla) y conecta el resto
+  - `audio.js` — AudioContext compartido, sfx e intención de sonido
+  - `carousel.js` — slides, transiciones, vistas y ficha técnica
+  - `ui.js` — menú, controles del video y listeners globales
+  - `about.js` — las dos fichas del menú: el about y "contáctame"
+  - `synth-ui.js` — la interfaz del sinte (potes, presets, efectos, teclado)
+  - `synth.js` — el motor de audio del sinte
 - `data.json` — proyectos: `title`, `role`, `studio`, `videoPath`, `start`, `finish` (segundos del bucle por defecto; `null` = hasta el final), `highlight`, `visible`
 - `data/projects/<slug>/video.webm` — los videos
 

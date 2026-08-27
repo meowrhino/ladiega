@@ -3,7 +3,7 @@
 
 import { playSfx, sound } from './audio.js';
 import * as carousel from './carousel.js';
-import { openOscAbout, closeOscAbout, aboutEscape } from './about.js';
+import { openOscAbout, openContacto, closeFichas, aboutEscape, hayContacto } from './about.js';
 
 const isTouch = window.matchMedia('(pointer: coarse)').matches;
 
@@ -34,7 +34,7 @@ const MENU_ICONS = {
     music: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v1h2v1h2v2h1v3h-2V6h-2V5H9v6h-1v2H7v1H4v-1H3v-2h1v-1h3z"/></svg>',
     brands: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 1h2v3h1v1h1v1h4v2h-1v1h-1v1h-1v4h-2v-1H9v-1H7v1H6v1H4V9H3V8H2V7H1V5h4V4h1V3h1z"/></svg>',
     about: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M7 0h2v4h1v1h1v1h4v2h-4v1h-1v1h-1v4H7v-4H6v-1H5V8H1V6h4V5h1V4h1z"/></svg>',
-    gestoria: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M6 2h4v2h4v3H9V6H7v1H2V4h4zM2 8h5v1h2V8h5v6H2z"/></svg>'
+    contacto: '<svg viewBox="0 0 16 16" shape-rendering="crispEdges"><path fill="currentColor" d="M1 3h14v10H1zm1 2v6h12V5l-6 4z"/></svg>'
 };
 
 function buildMenu(DATA, allProjects) {
@@ -88,10 +88,11 @@ function buildMenu(DATA, allProjects) {
 
     menuNav.appendChild(mkBtn('menu-item menu-link', (DATA.about && DATA.about.title) || 'about', openOscAbout, MENU_ICONS.about));
 
-    if (DATA.gestoria) {
-        const g = mkBtn('menu-item menu-link', DATA.gestoria.label || 'gestoría', carousel.goGestoria, MENU_ICONS.gestoria);
-        g.dataset.nav = 'gestoria';
-        menuNav.appendChild(g);
+    if (hayContacto()) {
+        const c = mkBtn('menu-item menu-link', (DATA.contacto && DATA.contacto.label) || 'contáctame',
+            openContacto, MENU_ICONS.contacto);
+        c.dataset.nav = 'contacto';
+        menuNav.appendChild(c);
     }
 }
 
@@ -102,10 +103,9 @@ function markCurrent() {
     const mode = carousel.getMode();
     const p = carousel.getCurrentProject();
     const seccion = mode === 'home' ? 'home'
-        : mode === 'gestoria' ? 'gestoria'
         : mode === 'category' && p ? 'cat:' + p.category
         : p ? 'proj:' + p.slug : '';
-    const enPantalla = p && mode !== 'gestoria' ? 'proj:' + p.slug : '';
+    const enPantalla = p ? 'proj:' + p.slug : '';
     let foco = null;
     menuNav.querySelectorAll('[data-nav]').forEach(b => {
         const suena = !!enPantalla && b.dataset.nav === enPantalla;
@@ -122,7 +122,7 @@ function markCurrent() {
 function openMenu() {
     clearTimeout(menuOverlay._hideTimer);
     menuOverlay.classList.remove('hidden', 'closing');
-    closeOscAbout();
+    closeFichas();
     document.body.classList.add('overlay-open');
     playSfx('select');
     // cada boton entra desde un sitio aleatorio distinto
@@ -160,7 +160,7 @@ function hideOverlay(ov) {
 
 export function closeOverlays() {
     hideOverlay(menuOverlay);
-    closeOscAbout();
+    closeFichas();
     document.body.classList.remove('overlay-open');
 }
 
@@ -194,7 +194,7 @@ function setCtrlVars(prefix) {
 
 function showControls() {
     // con un overlay abierto no pintamos controles detras del difuminado
-    if (carousel.getMode() === 'gestoria' || document.body.classList.contains('overlay-open')) return;
+    if (document.body.classList.contains('overlay-open')) return;
     document.body.classList.add('booted');
     if (controls.classList.contains('faded')) {
         setCtrlVars('i');
@@ -269,7 +269,7 @@ function bindUI() {
         carousel.applySound();
         playSfx('move');
         const v = carousel.curSlide().video;
-        if (sound.on && v.paused && !carousel.isEngaged() && carousel.getMode() !== 'gestoria') v.play().catch(() => {});
+        if (sound.on && v.paused && !carousel.isEngaged()) v.play().catch(() => {});
     });
 
     seekBar.addEventListener('input', () => {
@@ -337,7 +337,7 @@ function bindUI() {
         if (tag === 'INPUT' || tag === 'BUTTON') return;
         const overlayOpen = !menuOverlay.classList.contains('hidden') ||
             document.querySelector('.osc-about:not(.hidden)');
-        if (overlayOpen || carousel.getMode() === 'gestoria') return;
+        if (overlayOpen) return;
         if (e.key === ' ') { e.preventDefault(); playBtn.click(); }
         else if (e.key === 'ArrowRight') carousel.next();
         else if (e.key === 'ArrowLeft') carousel.prev();
@@ -353,7 +353,7 @@ function bindUI() {
         sound.unlocked = true;
         carousel.applySound();
         const v = carousel.curSlide().video;
-        if (v.paused && !carousel.isEngaged() && carousel.getMode() !== 'gestoria') v.play().catch(() => {});
+        if (v.paused && !carousel.isEngaged()) v.play().catch(() => {});
         document.removeEventListener('pointerdown', unlock);
         document.removeEventListener('keydown', unlock);
     };

@@ -1,5 +1,5 @@
 // la diega — carrusel de video a pantalla completa: slides, transiciones,
-// vistas (home / categoria / proyecto / gestoria) y ficha tecnica.
+// vistas (home / categoria / proyecto) y ficha tecnica.
 
 import { playSfx, sound, isAudible } from './audio.js';
 
@@ -7,7 +7,7 @@ let DATA = null;
 let allProjects = [];   // proyectos visibles con video, en el orden de data.json
 let playlist = [];      // lista que alimenta el carrusel actual
 let index = 0;
-let mode = 'home';      // 'home' | 'category' | 'single' | 'gestoria'
+let mode = 'home';      // 'home' | 'category' | 'single'
 let engaged = false;    // el usuario ha tocado este video → se ignora el bucle start/finish
 let transitioning = false;
 let seeking = false;
@@ -16,7 +16,7 @@ let seeking = false;
 let slides = [];        // [{root, video, bg, project}]
 let cur = 0;
 
-let stage, seekBar, playBtn, soundBtn, controls, ficha, gestoriaView, bigTitle, wipe;
+let stage, seekBar, playBtn, soundBtn, controls, ficha, bigTitle, wipe;
 
 // lo que el carrusel necesita de otros modulos se inyecta desde main.js (sin ciclos)
 let hooks = { closeOverlays: () => {}, hideControls: () => {} };
@@ -42,12 +42,8 @@ export function initCarousel(data, projects) {
     seekBar = document.getElementById('seekBar');
     soundBtn = document.getElementById('soundBtn');
     ficha = document.getElementById('ficha');
-    gestoriaView = document.getElementById('gestoriaView');
     bigTitle = document.getElementById('bigTitle');
     wipe = document.getElementById('wipe');
-
-    const photo = document.getElementById('gestoriaPhoto');
-    if (DATA.gestoria && DATA.gestoria.photo) photo.src = DATA.gestoria.photo;
 
     setupSlides();
     window.addEventListener('resize', () => slides.forEach(fitSlide));
@@ -58,7 +54,7 @@ export function initCarousel(data, projects) {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
             sonaba = !curSlide().video.paused;
-        } else if (sonaba && mode !== 'gestoria') {
+        } else if (sonaba) {
             curSlide().video.play().catch(() => {});
         }
     });
@@ -349,7 +345,6 @@ export function playWipe(alTapar) {
 /* ===== Vistas ===== */
 
 export function goHome(instant = false) {
-    exitGestoria();
     mode = 'home';
     const highlights = allProjects.filter(p => p.highlight);
     playlist = highlights.length ? highlights : allProjects.slice();
@@ -362,7 +357,6 @@ export function goHome(instant = false) {
 export function goCategory(slug) {
     const list = allProjects.filter(p => p.category === slug);
     if (!list.length) return;
-    exitGestoria();
     mode = 'category';
     playlist = list;
     index = 0;
@@ -372,7 +366,6 @@ export function goCategory(slug) {
 }
 
 export function goProject(project) {
-    exitGestoria();
     mode = 'single';
     playlist = [project];
     index = 0;
@@ -381,24 +374,8 @@ export function goProject(project) {
     showVideo(project, 1, 'wipe');
 }
 
-export function goGestoria() {
-    playWipe();
-    hooks.hideControls();
-    mode = 'gestoria';
-    slides.forEach(s => { s.video.pause(); s.bg.pause(); });
-    gestoriaView.classList.remove('hidden');
-    updateModeUI();
-    updateFicha();
-    hooks.closeOverlays();
-}
-
-function exitGestoria() {
-    gestoriaView.classList.add('hidden');
-}
-
 function updateModeUI() {
     controls.classList.toggle('mode-single', mode === 'single');
-    controls.classList.toggle('gone', mode === 'gestoria');
     document.body.dataset.mode = mode;
 }
 
@@ -413,10 +390,6 @@ function updateFicha() {
         ficha.appendChild(span);
         return span;
     };
-    if (mode === 'gestoria') {
-        ((DATA.gestoria && DATA.gestoria.clients) || []).forEach(name => addLine('ficha-title', name));
-        return;
-    }
     const p = playlist[index];
     if (!p) return;
     // contador de nivel: por que video del carrusel vas;
