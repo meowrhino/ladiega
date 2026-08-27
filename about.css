@@ -258,33 +258,34 @@
 }
 
 /* ===== Ficha de contacto =====
-   la misma ficha que el about pero sin sinte: los enlaces y, debajo, la
-   gestoria. El contenido se edita en la clave "contacto" de data.json */
-.osc-contacto .oscab { gap: 26px; }
+   la misma ficha que el about pero sin sinte: un parrafo con el enlace del
+   correo dentro. El contenido se edita en la clave "contacto" de data.json */
+.osc-contacto .oscab { gap: 24px; }
 
-.oscab-enlaces { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding: 0 16px; }
-.oscab-enlace {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    padding: 8px 22px 10px; text-decoration: none; color: var(--text);
-    box-shadow: inset 0 0 0 2px var(--highlight);
-    transform: rotate(-1deg); transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+.oscab-texto {
+    max-width: min(680px, 88vw);
+    padding: 0 8px;
+    font-size: clamp(21px, 3vw, 30px);
+    line-height: 1.35;
+    text-align: center;
+    color: var(--text);
 }
-.oscab-enlace:nth-child(even) { transform: rotate(1.2deg); }
-a.oscab-enlace:hover, a.oscab-enlace:focus-visible {
-    background: var(--highlight); color: #000; outline: none;
-    transform: rotate(-2deg) scale(1.05); box-shadow: 3px 3px 0 #000;
-}
-.oscab-enlace-que { font-size: 14px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; }
-.oscab-enlace-val { font-size: clamp(22px, 3.4vw, 32px); line-height: 1; }
 
-/* la gestoria: en pequeñito, debajo de los enlaces */
-.oscab-gestoria { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 16px; text-align: center; }
-.oscab-gtit { font-size: 26px; color: var(--highlight); }
-.oscab-glinea { font-size: 16px; color: var(--dim); }
-.oscab-gnombres { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 2px; }
-.oscab-gnombre {
-    font-size: 20px; line-height: 1; padding: 3px 14px 5px;
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.28);
+/* la palabra que abre el correo: pegatina amarilla, como el resto de la web */
+.oscab-mail {
+    display: inline-block;
+    padding: 1px 12px 3px;
+    color: #000;
+    background: var(--highlight);
+    text-decoration: none;
     transform: rotate(-1.5deg);
+    clip-path: polygon(0 12%, 97% 0, 100% 90%, 3% 100%);
+    transition: transform 0.15s ease;
 }
-.oscab-gnombre:nth-child(even) { transform: rotate(1.5deg); }
+
+.oscab-mail:hover,
+.oscab-mail:focus-visible {
+    outline: none;
+    transform: rotate(1.5deg) scale(1.06);
+    box-shadow: 3px 3px 0 #000;
+}

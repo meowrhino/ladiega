@@ -68,35 +68,37 @@ function renderAbout(about) {
 
 /* ===== Contacto ===== */
 
-function renderContacto(c) {
-    // los enlaces sin rellenar no se pintan: mejor nada que un hueco vacio
-    const enlaces = (c.enlaces || [])
-        .filter(e => e && e.valor)
-        .map(e => e.url
-            ? '<a class="oscab-enlace" href="' + e.url + '" target="_blank" rel="noopener">' +
-                  '<span class="oscab-enlace-que">' + e.que + '</span>' +
-                  '<span class="oscab-enlace-val">' + e.valor + '</span></a>'
-            : '<span class="oscab-enlace">' +
-                  '<span class="oscab-enlace-que">' + e.que + '</span>' +
-                  '<span class="oscab-enlace-val">' + e.valor + '</span></span>')
-        .join('');
+// escapar lo que venga de data.json antes de meterlo en el HTML
+function esc(t) {
+    return String(t == null ? '' : t)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
 
-    const g = c.gestoria || {};
-    const nombres = (g.nombres || []).map(n =>
-        '<span class="oscab-gnombre">' + n + '</span>').join('');
-    const gestoria = nombres
-        ? '<div class="oscab-gestoria">' +
-              '<div class="oscab-gtit">' + (g.titulo || 'la gestoría') + '</div>' +
-              (g.linea ? '<div class="oscab-glinea">' + g.linea + '</div>' : '') +
-              '<div class="oscab-gnombres">' + nombres + '</div>' +
-          '</div>'
+// el texto lleva una palabra entre llaves — {contáctame} — que se convierte
+// en el enlace que abre el correo. Asi se cambia todo desde data.json
+function renderContacto(c) {
+    const email = c.email || '';
+    const texto = c.texto || '';
+    const partido = texto.match(/^([\s\S]*?)\{([^}]+)\}([\s\S]*)$/);
+    const enlace = email
+        ? '<a class="oscab-mail" href="mailto:' + esc(email) + '">' +
+              esc(partido ? partido[2] : 'contáctame') + '</a>'
         : '';
+
+    let cuerpo = '';
+    if (partido) {
+        cuerpo = esc(partido[1]) + enlace + esc(partido[3]);
+    } else if (texto) {
+        cuerpo = esc(texto) + (enlace ? ' ' + enlace : '');
+    } else {
+        cuerpo = enlace;
+    }
 
     return '<div class="oscab">' +
         renderOnda() +
-        renderCabecera(c.name || 'contáctame', c.clase) +
-        (enlaces ? '<div class="oscab-enlaces">' + enlaces + '</div>' : '') +
-        gestoria +
+        renderCabecera(esc(c.name || 'contáctame'), esc(c.clase)) +
+        (cuerpo ? '<p class="oscab-texto">' + cuerpo + '</p>' : '') +
     '</div>';
 }
 

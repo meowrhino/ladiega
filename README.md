@@ -14,7 +14,7 @@ portfolio audiovisual: un carrusel de videos a pantalla completa con una telita 
   - **teclado** de una octava de do a do, con sus negras. Se toca con el dedo, el ratón (arrastrando hace glissando) o el teclado del ordenador: blancas en `A S D F G H J K`, negras en `W E · T Y U`. **◀ Z / X ▶** cambian de octava (do2 a do6).
   - **volumen** y el chip **"canción"**, que mutea/recupera el video de fondo. Al abrir el sinte, la canción baja sola de volumen para poder tocar encima.
   - arriba del todo, el osciloscopio cruza la pantalla y se arrastra como un theremin.
-- **contáctame**: debajo del about en el menú, con la misma pinta pero sin sinte: los enlaces para escribirle y, debajo, la gestoría. Todo se edita en la clave `contacto` de `data.json` — los enlaces que dejes con el `valor` vacío no se pintan.
+- **contáctame**: debajo del about en el menú, con la misma pinta pero sin sinte: la gestoría, con un texto y el enlace que abre el correo. Se edita en la clave `contacto` de `data.json`; la palabra que pongas entre llaves —`{contáctame}`— es la que se convierte en el `mailto:` del `email`.
 - **detallitos**: cursor de manita pixel, sfx estilo consola ligados al toggle sound, título gigante letra a letra al cambiar de video, y barrido diagonal (siempre al navegar desde el menú; 1 de cada 4 en el avance automático). El barrido va en dos tiempos: tapa la pantalla, el video cambia debajo —esperando a que tenga imagen, para que nunca se vea negro— y se retira.
 - **encaje**: video vertical en pantalla horizontal → centrado con el mismo video borroso detrás; video horizontal en móvil → recorte central.
 
@@ -39,3 +39,13 @@ python3 -m http.server 8080
 ```
 
 luego abrir `http://localhost:8080` en el navegador.
+
+## SEO y los dos repos
+
+El sitio bueno es **https://ladiega.com**. Habrá dos repos con el mismo código: el de la clienta (el de verdad, con el dominio) y una copia. Para que la copia no compita en Google:
+
+- **`<link rel="canonical">` en `index.html`** apunta siempre a `https://ladiega.com/`. Va idéntico en los dos repos: le dice a Google que, mire donde mire, el original es ese. Es la red de seguridad.
+- **`robots.txt` es el único archivo que cambia entre los dos.** En el repo de verdad va `Allow: /`; en la copia hay que ponerle `Disallow: /`. Está explicado dentro del propio archivo.
+- **`sitemap.xml`** solo tiene sentido en el repo de verdad.
+- Falta **`data/og.png`** (1200×630): es la imagen que sale al compartir el enlace por WhatsApp, Instagram o Twitter. El `<meta og:image>` ya la apunta.
+- Para que el dominio funcione en GitHub Pages hace falta un archivo **`CNAME`** con `ladiega.com` dentro, en el repo de verdad. En Cloudflare, el SSL/TLS tiene que estar en **Full**.

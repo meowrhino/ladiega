@@ -170,17 +170,10 @@
   },
   "contacto": {
     "label": "contáctame",
-    "name": "contáctame",
+    "name": "la gestoría",
     "clase": "",
-    "_nota": "rellena valor (lo que se lee) y url (a donde lleva) de cada enlace; los que dejes vacíos no salen",
-    "enlaces": [
-      { "que": "email",     "valor": "", "url": "" },
-      { "que": "instagram", "valor": "", "url": "" }
-    ],
-    "gestoria": {
-      "titulo": "la gestoría",
-      "linea": "el papeleo lo llevan",
-      "nombres": ["Gemma", "Manu", "Laura"]
-    }
+    "email": "diego.fd.92@gmail.com",
+    "texto": "si eres autónomx y necesitas ayuda con impuestos, papeleo, contabilidad, etc, {contáctame}",
+    "_ayuda": "la palabra entre llaves {} se convierte en el enlace que abre el correo. Cambia el email aquí y cambia en toda la web"
   }
 }
