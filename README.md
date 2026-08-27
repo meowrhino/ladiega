@@ -47,5 +47,5 @@ El sitio bueno es **https://ladiega.com**. Habrá dos repos con el mismo código
 - **`<link rel="canonical">` en `index.html`** apunta siempre a `https://ladiega.com/`. Va idéntico en los dos repos: le dice a Google que, mire donde mire, el original es ese. Es la red de seguridad.
 - **`robots.txt` es el único archivo que cambia entre los dos.** En el repo de verdad va `Allow: /`; en la copia hay que ponerle `Disallow: /`. Está explicado dentro del propio archivo.
 - **`sitemap.xml`** solo tiene sentido en el repo de verdad.
-- Falta **`data/og.png`** (1200×630): es la imagen que sale al compartir el enlace por WhatsApp, Instagram o Twitter. El `<meta og:image>` ya la apunta.
-- Para que el dominio funcione en GitHub Pages hace falta un archivo **`CNAME`** con `ladiega.com` dentro, en el repo de verdad. En Cloudflare, el SSL/TLS tiene que estar en **Full**.
+- **`data/og.jpg`** (1200×630) es la imagen que sale al compartir el enlace por WhatsApp, Instagram o Twitter: un fotograma del video de Samantha Hudson con el nombre encima. Para cambiarla, sustituye el archivo respetando el tamaño.
+- El sitio se sirve desde **GitHub Pages** (el archivo `CNAME` reclama el dominio) con Cloudflare delante en **Full**. Se descartó Cloudflare Workers porque no sirve peticiones por rango y sin ellas la barra de progreso del video no puede saltar.
