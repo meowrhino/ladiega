@@ -100,7 +100,7 @@ const PRESETS = [
         reverb:  { on: true, time: 1, predelay: 0, mix: 0.15 },
         arp:     { attack: 0.02 }
     }},
-    { label: 'chunda', arp: true, s: {
+    { label: 'trance', arp: true, s: {
         wave: 2, filter: 7, drone: false,
         voices:  { n: 2, detune: 12 },
         chorus:  { on: false },
