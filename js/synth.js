@@ -14,16 +14,32 @@ export const WAVES = [
 // escala pentatonica: caiga donde caiga el pote, siempre suena afinado
 const PENTA = [0, 3, 5, 7, 10];
 
+// los once pasos cubren dos octavas; OCT las desplaza enteras (teclas Z / X)
+export const OCT_MIN = -1;
+export const OCT_MAX = 2;
+
 export function noteHz(step) {
     const s = Math.max(0, Math.min(10, Math.round(step)));
-    return 110 * Math.pow(2, (PENTA[s % 5] + Math.floor(s / 5) * 12) / 12);
+    return 110 * Math.pow(2, (PENTA[s % 5] + (Math.floor(s / 5) + SYNTH.oct) * 12) / 12);
 }
 
 const NOTA_NOMBRE = ['la', 'do', 're', 'mi', 'sol'];
 
+// el numero es la octava de verdad: la pentatonica empieza en la, y el do
+// que va detras ya pertenece a la octava siguiente (la2 · do3 · re3...)
 export function noteLabel(step) {
     const s = Math.max(0, Math.min(10, Math.round(step)));
-    return NOTA_NOMBRE[s % 5] + (2 + Math.floor(s / 5));
+    const dentro = s % 5;
+    return NOTA_NOMBRE[dentro] + (2 + SYNTH.oct + Math.floor(s / 5) + (dentro ? 1 : 0));
+}
+
+// sube o baja la escala entera. Devuelve false si ya estaba en el tope
+export function shiftOctave(d) {
+    const n = Math.max(OCT_MIN, Math.min(OCT_MAX, SYNTH.oct + d));
+    if (n === SYNTH.oct) return false;
+    SYNTH.oct = n;
+    applyParams();   // reafina en el sitio lo que este sonando
+    return true;
 }
 
 // filtro: 0..10 → 150 Hz .. 12 kHz en escala logaritmica
@@ -46,6 +62,7 @@ const RELEASE = 0.3;   // release fijo al soltar una nota (el ataque si es edita
 export const SYNTH = {
     wave: 0,
     note: 10,
+    oct: 0,        // desplazamiento de la escala entera, OCT_MIN..OCT_MAX
     filter: 10,
     drone: true,   // true = siempre sonando · false = solo al tocar (teclas / arpegio)
     voices:  { n: 1, detune: 10 },

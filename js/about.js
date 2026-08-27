@@ -208,26 +208,45 @@ function renderAbout(about) {
     let vol = '';
     for (let i = 0; i < 8; i++) vol += '<span class="oscab-vseg"></span>';
 
+    // cada trozo del sinte va en su bloque, con un rotulo que dice para que
+    // sirve: sin eso era una pila de botones sueltos sin orden aparente
+    const bloque = (rotulo, pista, dentro) =>
+        '<div class="oscab-block">' +
+            '<span class="oscab-sec">' + rotulo +
+                (pista ? '<em>' + pista + '</em>' : '') + '</span>' +
+            dentro +
+        '</div>';
+
     return '<div class="oscab">' +
         '<div class="oscab-wave">' + wave + '</div>' +
         '<canvas class="oscab-scope" width="640" height="140"></canvas>' +
-        '<div class="oscab-hint">toca los pads · o el teclado A–Ñ · arrastra la onda como un theremin</div>' +
+        '<div class="oscab-hint">arrastra la onda de lado a lado, como un theremin</div>' +
         '<div class="oscab-head">' +
             '<div class="oscab-name">' + (about.name || 'la diega') + '</div>' +
             '<div class="oscab-role">' + (about.clase || '') + '</div>' +
         '</div>' +
         '<div class="oscab-desk">' + stats + '</div>' +
-        '<div class="oscab-pads">' + pads + '</div>' +
-        '<div class="oscab-presets">' + presets + '</div>' +
-        '<div class="oscab-pots">' + pot('wave', 'tipo de onda') + pot('note', 'nota') + pot('filter', 'filtro') + '</div>' +
-        '<div class="oscab-mods">' + mods + '</div>' +
-        '<div class="oscab-vol">' +
-            '<button class="oscab-vbtn" data-d="-1" aria-label="bajar volumen">−</button>' +
-            '<span class="oscab-vmeter">' + vol + '</span>' +
-            '<button class="oscab-vbtn" data-d="1" aria-label="subir volumen">+</button>' +
-            '<button class="oscab-chip oscab-drone">drone</button>' +
-            '<button class="oscab-chip oscab-song">canción</button>' +
-        '</div>' +
+        bloque('toca', 'con el dedo, el ratón o el teclado A–Ñ',
+            '<div class="oscab-pads">' + pads + '</div>' +
+            '<div class="oscab-oct">' +
+                '<button class="oscab-octbtn" data-d="-1" aria-label="bajar una octava">◀ Z</button>' +
+                '<span class="oscab-octlbl">octava <b class="oscab-octn"></b></span>' +
+                '<button class="oscab-octbtn" data-d="1" aria-label="subir una octava">X ▶</button>' +
+            '</div>') +
+        bloque('suena a', 'un clic y cambia todo',
+            '<div class="oscab-presets">' + presets + '</div>') +
+        bloque('retoca', 'arrastra arriba y abajo',
+            '<div class="oscab-pots">' + pot('wave', 'tipo de onda') + pot('note', 'nota') + pot('filter', 'filtro') + '</div>') +
+        bloque('efectos', 'el nombre lo enciende · los ··· lo ajustan',
+            '<div class="oscab-mods">' + mods + '</div>') +
+        bloque('sonido', '',
+            '<div class="oscab-vol">' +
+                '<button class="oscab-vbtn" data-d="-1" aria-label="bajar volumen">−</button>' +
+                '<span class="oscab-vmeter">' + vol + '</span>' +
+                '<button class="oscab-vbtn" data-d="1" aria-label="subir volumen">+</button>' +
+                '<button class="oscab-chip oscab-drone" title="siempre sonando ↔ solo al tocar">drone</button>' +
+                '<button class="oscab-chip oscab-song" title="la canción del video de detrás">canción</button>' +
+            '</div>') +
         '<button class="oscab-osc-btn">encender el sinte</button>' +
     '</div>' +
     '<div class="oscab-modal hidden">' +
@@ -271,8 +290,12 @@ function moduleBody(key) {
 function refreshMods(ov) {
     ov.querySelectorAll('.oscab-mod').forEach(b => {
         const k = b.dataset.m;
-        const on = oscAnim.on && (k === 'arpegio' ? synth.isArpOn()
-                 : k === 'voces' ? SYNTH.voices.n > 1 : !!SYNTH[MODULES[k].target].on);
+        // las voces no se encienden ni se apagan: el chip dice cuantas hay
+        if (k === 'voces') {
+            b.textContent = 'voces ×' + Math.round(SYNTH.voices.n);
+            return;
+        }
+        const on = oscAnim.on && (k === 'arpegio' ? synth.isArpOn() : !!SYNTH[MODULES[k].target].on);
         b.classList.toggle('on', on);
     });
 }
@@ -371,6 +394,30 @@ function pintaPads(ov, tocando) {
         ? (synth.engineOn() && SYNTH.drone ? SYNTH.note : -1)
         : tocando;
     ov.querySelectorAll('.oscab-pad').forEach(p => p.classList.toggle('on', +p.dataset.i === activo));
+}
+
+// la escala entera sube o baja: hay que reetiquetar los pads, el rotulo de
+// octava y el pote de nota, porque todos dicen en que nota estan
+function pintaOctava(ov) {
+    ov.querySelectorAll('.oscab-pad').forEach(p => {
+        const n = p.querySelector('.oscab-pad-n');
+        if (n) n.textContent = synth.noteLabel(+p.dataset.i);
+    });
+    const lbl = ov.querySelector('.oscab-octn');
+    if (lbl) lbl.textContent = synth.noteLabel(0) + '–' + synth.noteLabel(10);
+    ov.querySelectorAll('.oscab-octbtn').forEach(b => {
+        const d = +b.dataset.d;
+        b.disabled = d < 0 ? SYNTH.oct <= synth.OCT_MIN : SYNTH.oct >= synth.OCT_MAX;
+    });
+}
+
+function cambiaOctava(ov, d) {
+    if (!synth.shiftOctave(d)) return;
+    playSfx('move');
+    pintaOctava(ov);
+    pintaPotes(ov);
+    pintaPads(ov);
+    if (!SYNTH.drone && !synth.isArpOn()) synth.playNote(SYNTH.note, 450);
 }
 
 // -1 = ninguno (se ha tocado algo a mano y ya no es tal cual el preset)
@@ -492,8 +539,21 @@ function wireAbout(ov) {
         });
         p.addEventListener('pointerup', suelta);
         p.addEventListener('pointercancel', suelta);
+        // con el pad enfocado, Enter tambien toca (el espacio ya esta cogido)
+        p.addEventListener('keydown', e => {
+            if (e.key !== 'Enter' || !synth.engineOn()) return;
+            synth.playNote(i, 400);
+            pintaPads(ov, i);
+            setTimeout(() => pintaPads(ov), 400);
+        });
     });
     pintaPads(ov);
+
+    // subir y bajar la escala entera
+    ov.querySelectorAll('.oscab-octbtn').forEach(b => {
+        b.addEventListener('click', () => cambiaOctava(ov, +b.dataset.d));
+    });
+    pintaOctava(ov);
 
     const modal = ov.querySelector('.oscab-modal');
     modal.querySelector('.oscab-modal-close').addEventListener('click', () => { playSfx('back'); closeModule(ov); });
@@ -588,9 +648,16 @@ function bindTeclado() {
             if (!e.repeat) { synth.noteOn(SYNTH.note); pintaPads(oscOverlay, SYNTH.note); }
             return;
         }
-        const i = KEYS.indexOf(e.key.toLowerCase());
+        const k = e.key.toLowerCase();
+        // Z / X mueven la escala entera una octava
+        if (k === 'z' || k === 'x') {
+            e.preventDefault();
+            if (!e.repeat) cambiaOctava(oscOverlay, k === 'x' ? 1 : -1);
+            return;
+        }
+        const i = KEYS.indexOf(k);
         if (i < 0 || e.repeat) return;
-        teclas.add(e.key.toLowerCase());
+        teclas.add(k);
         synth.noteOn(i);
         pintaPotes(oscOverlay);
         pintaPads(oscOverlay, i);   // el pad se enciende tambien desde el teclado
