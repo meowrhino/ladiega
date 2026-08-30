@@ -10,9 +10,15 @@
 .osc-about {
     padding: 0; /* la onda y el osciloscopio van de lado a lado */
 }
+/* la caja llega al borde de la pantalla a proposito: si se queda corta, el
+   recorte del scroll cae flotando dentro de la pagina y parte las letras por
+   la mitad con el fondo asomando alrededor. Al borde se lee como lo que es:
+   hay mas contenido, sigue bajando. dvh y no vh para que en movil cuente la
+   barra del navegador cuando aparece y desaparece */
 .osc-inner {
     width: 100vw;
-    max-height: 92vh;
+    max-height: 100vh;
+    max-height: 100dvh;
     overflow-y: auto;
     scrollbar-width: none;
     padding: 24px 0;
