@@ -1,6 +1,6 @@
 /* ============================================================
-   ABOUT: la ficha-sintetizador. En reposo se ven los stats y la
-   onda decorativa; con .oscillator aparece el sinte, de arriba abajo:
+   ABOUT: la ficha-sintetizador. En reposo se ven los stats; con
+   .oscillator aparece el sinte, de arriba abajo:
    potes (onda y filtro) · presets / efectos en pestañas · el teclado
    de una octava con sus negras y el cambio de octava · volumen y el
    chip de la cancion. Arriba, el osciloscopio cruza la pantalla y se
@@ -8,7 +8,7 @@
    El JS que lo mueve esta en js/about.js y js/synth.js.
    ============================================================ */
 .osc-about {
-    padding: 0; /* la onda y el osciloscopio van de lado a lado */
+    padding: 0; /* el osciloscopio va de lado a lado */
 }
 /* la caja llega al borde de la pantalla a proposito: si se queda corta, el
    recorte del scroll cae flotando dentro de la pagina y parte las letras por
@@ -32,15 +32,10 @@
 .oscab-name { font-size: clamp(48px, 9vw, 96px); line-height: 0.9; color: var(--highlight); text-shadow: 3px 3px 0 #000; }
 .oscab-role { font-size: clamp(18px, 2.6vw, 26px); }
 
-/* onda decorativa (reposo) ↔ osciloscopio en vivo, ambos a pantalla completa */
-.oscab-wave {
-    display: flex; align-items: flex-end; justify-content: space-between;
-    width: 100vw; padding: 0 10px; height: 60px;
-}
-.oscab-bar { width: 5px; height: 100%; background: var(--highlight); transform-origin: bottom; animation: oscabWave 1.1s ease-in-out infinite; }
-@keyframes oscabWave { 0%, 100% { transform: scaleY(0.18); } 50% { transform: scaleY(1); } }
+/* el osciloscopio: la unica onda que queda, y esta si dibuja lo que suena.
+   Antes habia otra decorativa en reposo, con una animacion fija que no
+   respondia a nada: parecia un medidor que no medía, asi que fuera. */
 .oscab-scope { display: none; width: 100vw; height: 140px; touch-action: none; }
-.oscab.oscillator .oscab-wave { display: none; }
 .oscab.oscillator .oscab-scope { display: block; }
 
 /* ficha: los tres stats, solo en reposo */

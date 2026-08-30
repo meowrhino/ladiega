@@ -37,16 +37,6 @@ function renderCabecera(nombre, linea) {
     '</div>';
 }
 
-// la onda decorativa cruza toda la pantalla: barras segun el ancho
-function renderOnda() {
-    const nBars = Math.max(28, Math.ceil(window.innerWidth / 22));
-    let wave = '';
-    for (let i = 0; i < nBars; i++) {
-        wave += '<span class="oscab-bar" style="animation-delay:' + (i * 55) + 'ms"></span>';
-    }
-    return '<div class="oscab-wave">' + wave + '</div>';
-}
-
 function renderAbout(about) {
     const stats = ABOUT_STATS.map(st => {
         const pct = (st.value * 10) + '%';
@@ -57,7 +47,6 @@ function renderAbout(about) {
     }).join('');
 
     return '<div class="oscab">' +
-        renderOnda() +
         sui.renderScope() +
         renderCabecera(about.name || 'la diega', about.clase) +
         '<div class="oscab-desk">' + stats + '</div>' +
@@ -100,7 +89,6 @@ function renderContacto(c) {
     }
 
     return '<div class="oscab">' +
-        renderOnda() +
         renderCabecera(esc(c.name || 'contáctame'), esc(c.clase)) +
         (cuerpo ? '<p class="oscab-texto">' + cuerpo + '</p>' : '') +
     '</div>';
