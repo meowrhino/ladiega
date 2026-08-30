@@ -11,6 +11,17 @@
     --dim: rgba(255, 255, 255, 0.65);
     --font-game: 'Jersey 10', monospace;
     --font-plain: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+    /* la pegatina rasgada: el mismo recorte estaba escrito a mano en siete
+       sitios (pestañas, presets, modulos, chips, toggles, ON/OFF del modal).
+       Cambiar la forma es ahora una linea, no siete */
+    --sticker: polygon(0 12%, 97% 0, 100% 90%, 3% 100%);
+    --sticker-chip: polygon(0 14%, 96% 0, 100% 88%, 4% 100%);
+
+    /* colores que solo usaba un sitio y estaban a pelo */
+    --key-white: #f2f0e6;   /* teclas blancas del piano */
+    --key-black: #14141f;   /* teclas negras */
+    --night: #0a0a1c;       /* la capa oscura del barrido */
 }
 
 html,
@@ -493,7 +504,7 @@ body.title-flight .play-big {
     background: var(--highlight);
     color: #000;
     text-shadow: none;
-    clip-path: polygon(0 14%, 96% 0, 100% 88%, 4% 100%);
+    clip-path: var(--sticker-chip);
 }
 
 .controls .toggle:hover,
@@ -636,7 +647,7 @@ body.title-flight .ficha {
 }
 
 .wipe::after {
-    background: #0a0a1c;
+    background: var(--night);
 }
 
 /* entrada: el amarillo cruza de largo y el oscuro se queda tapando la pantalla
