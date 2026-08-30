@@ -293,7 +293,9 @@
 
 /* firma de quien ha hecho la web, al pie del about */
 .oscab-firma {
-    margin-top: 4px;
+    /* separada del resto a proposito: es el pie, no una linea mas de la ficha
+       (los 20px de gap del contenedor se suman a este margen) */
+    margin-top: 52px;
     padding: 0 16px 4px;
     font-size: 16px;
     color: var(--dim);
