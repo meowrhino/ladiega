@@ -46,6 +46,7 @@ export function initCarousel(data, projects) {
     wipe = document.getElementById('wipe');
 
     setupSlides();
+    applySound();   // el boton arranca en su estado real (muted), no en el "on" del HTML
     window.addEventListener('resize', () => slides.forEach(fitSlide));
 
     // el navegador pausa los videos al ocultar la pestaña: reanudar al volver
@@ -102,11 +103,19 @@ export function duckSound(bajito) {
     slides.forEach(s => { s.video.volume = bajito ? 0.18 : 1; });
 }
 
-// refleja el estado real del sonido en los videos y en el boton (que asi no miente)
+// refleja el estado real del sonido en los videos y en el boton. Antes el
+// boton se pintaba con sound.on (lo que el usuario QUIERE), no con isAudible()
+// (lo que hay de verdad): arrancaba en "on" por el HTML aunque el navegador
+// aun no hubiera concedido el audio, y como nada llamaba a applySound() si el
+// intento inicial con sonido fallaba, se quedaba mintiendo hasta el primer
+// gesto. En Chrome eso pasa desapercibido porque el Media Engagement Index
+// suele dejar sonar directamente en visitas repetidas; Brave no usa ese
+// historial por privacidad, asi que el intento inicial falla siempre y el
+// boton se veia encendido sin sonar nada
 export function applySound() {
     const on = isAudible();
     slides.forEach(s => { s.video.muted = !on; });
-    if (soundBtn) soundBtn.classList.toggle('on', sound.on);
+    if (soundBtn) soundBtn.classList.toggle('on', on);
 }
 
 // intenta reproducir; primero CON sonido (si el navegador lo permite, queda
