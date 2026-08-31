@@ -450,7 +450,7 @@ body.booted .controls.faded .ctrl {
     left: -8px;
     z-index: -1;
     background: var(--highlight);
-    clip-path: polygon(2% 20%, 55% 4%, 98% 0%, 100% 74%, 90% 100%, 30% 94%, 4% 100%, 0 52%);
+    clip-path: var(--sticker);
     display: none;
 }
 
@@ -1018,7 +1018,7 @@ body.title-flight .ficha {
     bottom: 0;
     left: 34px;
     background: var(--highlight);
-    clip-path: polygon(2% 20%, 55% 4%, 98% 0%, 100% 74%, 90% 100%, 30% 94%, 4% 100%, 0 52%);
+    clip-path: var(--sticker);
     transform: rotate(0.6deg);
     display: none;
 }
