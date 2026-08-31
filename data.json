@@ -169,7 +169,7 @@
     "_nota": "el about es la ficha-sintetizador; los faders (musica / diseño sonoro / papeleo) se editan en ABOUT_STATS dentro de js/about.js"
   },
   "contacto": {
-    "label": "contáctame",
+    "label": "gestoría",
     "name": "la gestoría",
     "clase": "",
     "email": "diego.fd.92@gmail.com",

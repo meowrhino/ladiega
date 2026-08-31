@@ -89,7 +89,7 @@ function buildMenu(DATA, allProjects) {
     menuNav.appendChild(mkBtn('menu-item menu-link', (DATA.about && DATA.about.title) || 'about', openOscAbout, MENU_ICONS.about));
 
     if (hayContacto()) {
-        const c = mkBtn('menu-item menu-link', (DATA.contacto && DATA.contacto.label) || 'contáctame',
+        const c = mkBtn('menu-item menu-link', (DATA.contacto && DATA.contacto.label) || 'gestoría',
             openContacto, MENU_ICONS.contacto);
         c.dataset.nav = 'contacto';
         menuNav.appendChild(c);

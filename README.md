@@ -14,7 +14,7 @@ portfolio audiovisual: un carrusel de videos a pantalla completa con una telita 
   - **teclado** de una octava de do a do, con sus negras. Se toca con el dedo, el ratón (arrastrando hace glissando) o el teclado del ordenador: blancas en `A S D F G H J K`, negras en `W E · T Y U`. **◀ Z / X ▶** cambian de octava (do2 a do6).
   - **volumen** y el chip **"canción"**, que mutea/recupera el video de fondo. Al abrir el sinte, la canción baja sola de volumen para poder tocar encima.
   - arriba del todo, el osciloscopio cruza la pantalla y se arrastra como un theremin. Solo aparece con el sinte encendido: en reposo no hay ninguna onda, porque la que había antes era decorativa y no respondía a nada.
-- **contáctame**: debajo del about en el menú, con la misma pinta pero sin sinte: la gestoría, con un texto y el enlace que abre el correo. Se edita en la clave `contacto` de `data.json`; la palabra que pongas entre llaves —`{contáctame}`— es la que se convierte en el `mailto:` del `email`.
+- **gestoría**: debajo del about en el menú (así se llama ahora ahí; en `data.json` sigue siendo la clave `contacto`), con la misma pinta pero sin sinte: un texto y el enlace que abre el correo. La palabra que pongas entre llaves —`{contáctame}`— es la que se convierte en el `mailto:` del `email`.
 - **detallitos**: cursor de manita pixel, sfx estilo consola ligados al toggle sound, título gigante letra a letra al cambiar de video, y barrido diagonal (siempre al navegar desde el menú; 1 de cada 4 en el avance automático). El barrido va en dos tiempos: tapa la pantalla, el video cambia debajo —esperando a que tenga imagen, para que nunca se vea negro— y se retira.
 - **encaje**: video vertical en pantalla horizontal → centrado con el mismo video borroso detrás; video horizontal en móvil → recorte central.
 
@@ -26,7 +26,7 @@ portfolio audiovisual: un carrusel de videos a pantalla completa con una telita 
   - `audio.js` — AudioContext compartido, sfx e intención de sonido
   - `carousel.js` — slides, transiciones, vistas y ficha técnica
   - `ui.js` — menú, controles del video y listeners globales
-  - `about.js` — las dos fichas del menú: el about y "contáctame"
+  - `about.js` — las dos fichas del menú: el about y la gestoría
   - `synth-ui.js` — la interfaz del sinte (potes, presets, efectos, teclado)
   - `synth.js` — el motor de audio del sinte
 - `data.json` — proyectos: `title`, `role`, `studio`, `videoPath`, `start`, `finish` (segundos del bucle por defecto; `null` = hasta el final), `highlight`, `visible`
