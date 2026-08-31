@@ -367,9 +367,6 @@ body.controls-open .ficha {
     50% { transform: var(--base) translateX(5px); }
 }
 
-/* sin carrusel no hay flechas */
-body[data-mode="single"] .edge-arrow,
-
 /* ===== Navegacion del video: elementos sueltos repartidos por la pantalla ===== */
 .controls {
     position: fixed;
@@ -513,8 +510,15 @@ body.title-flight .play-big {
     outline: none;
 }
 
-/* proyecto suelto: sin carrusel */
-.controls.mode-single #autoBtn {
+/* sin carrusel (un proyecto suelto, o una lista de uno) no hay flechas ni auto:
+   no llevarian a ninguna parte. Antes las flechas se escondian por su cuenta
+   con body[data-mode="single"], lejos de aqui; al quitar la variante "gestoria"
+   se quedo la coma colgando y el selector se comio la regla de .controls: en un
+   proyecto suelto las flechas no solo no desaparecian, es que la de la derecha
+   heredaba left:0 y se apilaba encima de la de la izquierda, las dos muertas
+   (pointer-events: none). Ahora las dos cosas se apagan aqui, en una sola regla */
+.controls.sin-carrusel .edge-arrow,
+.controls.sin-carrusel #autoBtn {
     display: none;
 }
 

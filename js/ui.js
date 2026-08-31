@@ -340,8 +340,14 @@ function bindUI() {
             if (!aboutEscape()) closeOverlays();
             return;
         }
+        // el foco se queda en el ultimo boton que hayas pulsado, asi que si aqui
+        // se ignora todo lo que venga de un BUTTON, basta con hacer clic en una
+        // flecha para que las flechas del teclado dejen de funcionar. La barra si
+        // se la dejamos a los botones (es su forma de pulsarse) y al seekBar, que
+        // ademas se queda las flechas para moverse por el video
         const tag = document.activeElement ? document.activeElement.tagName : '';
-        if (tag === 'INPUT' || tag === 'BUTTON') return;
+        if (tag === 'INPUT') return;
+        if (e.key === ' ' && tag === 'BUTTON') return;
         const overlayOpen = !menuOverlay.classList.contains('hidden') ||
             document.querySelector('.osc-about:not(.hidden)');
         if (overlayOpen) return;

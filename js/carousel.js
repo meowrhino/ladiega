@@ -377,8 +377,12 @@ export function goProject(project) {
     showVideo(project, 1, 'wipe');
 }
 
+// sin carrusel se apagan las flechas y el auto (los esconde el CSS). No es solo
+// el proyecto suelto: una categoria con un unico proyecto tampoco tiene a donde
+// ir, y es la misma condicion con la que la ficha pinta el contador de nivel
 function updateModeUI() {
-    controls.classList.toggle('mode-single', mode === 'single');
+    const hayCarrusel = mode !== 'single' && playlist.length > 1;
+    controls.classList.toggle('sin-carrusel', !hayCarrusel);
     document.body.dataset.mode = mode;
 }
 
