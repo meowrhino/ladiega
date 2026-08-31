@@ -1,7 +1,7 @@
 // la diega — interfaz: menu a pantalla completa, controles desperdigados
 // del video y todos los listeners globales (teclado, gestos, desbloqueo de audio).
 
-import { playSfx, sound } from './audio.js';
+import { playSfx, sound, getAudioCtx } from './audio.js';
 import * as carousel from './carousel.js';
 import { openOscAbout, openContacto, closeFichas, aboutEscape, hayContacto } from './about.js';
 
@@ -9,6 +9,7 @@ const isTouch = window.matchMedia('(pointer: coarse)').matches;
 
 let controls, playBtn, seekBar, autoBtn, soundBtn;
 let menuBtn, brandBtn, ficha, menuOverlay, menuNav;
+let sonidoGate;
 
 export function initUI(DATA, allProjects) {
     controls = document.getElementById('controls');
@@ -21,9 +22,11 @@ export function initUI(DATA, allProjects) {
     ficha = document.getElementById('ficha');
     menuOverlay = document.getElementById('menuOverlay');
     menuNav = document.getElementById('menuNav');
+    sonidoGate = document.getElementById('sonidoGate');
 
     buildMenu(DATA, allProjects);
     bindUI();
+    bindGate();
 }
 
 /* ===== Menu ===== */
@@ -219,6 +222,63 @@ function buzz() {
     if (navigator.vibrate) navigator.vibrate(12);
 }
 
+/* ===== Puerta de sonido ===== */
+
+// quien dice que no se queda sin que le pregunten en las siguientes visitas;
+// el "si" no se guarda porque no sirve de nada: el gesto hace falta cada vez
+const RECUERDO = 'ladiega:sonido';
+
+function dijoQueNo() {
+    try { return localStorage.getItem(RECUERDO) === 'no'; } catch (e) { return false; }
+}
+
+function apunta(v) {
+    try { localStorage.setItem(RECUERDO, v); } catch (e) { /* sin sitio donde apuntar */ }
+}
+
+let gateAbierto = false;
+
+function bindGate() {
+    // el "no" de otra visita se respeta desde el arranque, no solo escondiendo
+    // la puerta: si no, en un navegador que si concede el audio de entrada el
+    // video empezaria a sonarle a quien ya habia dicho que no queria
+    if (dijoQueNo()) sound.on = false;
+    // el carrusel avisa cuando el navegador le ha rechazado el audio
+    document.addEventListener('ladiega:sinsonido', abreGate);
+    document.getElementById('gateSi').addEventListener('click', () => respondeGate(true));
+    document.getElementById('gateNo').addEventListener('click', () => respondeGate(false));
+}
+
+function abreGate() {
+    if (gateAbierto || dijoQueNo()) return;
+    gateAbierto = true;
+    sonidoGate.classList.remove('hidden');
+    // sin controles ni titulo gigante detras del difuminado mientras se pregunta
+    document.body.classList.add('overlay-open');
+    hideControls();
+    document.getElementById('gateSi').focus();
+}
+
+// la respuesta cierra el asunto en los dos sentidos: pase lo que pase queda
+// unlocked, asi que el desbloqueo por primer gesto ya no vuelve a meter mano
+function respondeGate(quiere) {
+    if (!gateAbierto) return;
+    gateAbierto = false;
+    sonidoGate.classList.add('hidden');
+    document.body.classList.remove('overlay-open');
+    sound.unlocked = true;
+    sound.on = quiere;
+    carousel.applySound();
+    if (quiere) {
+        getAudioCtx();   // el mismo clic despierta los bleeps de interfaz
+        const v = carousel.curSlide().video;
+        if (v.paused) v.play().catch(() => {});
+        playSfx('select');
+    } else {
+        apunta('no');
+    }
+}
+
 /* ===== Listeners ===== */
 
 function bindUI() {
@@ -336,6 +396,8 @@ function bindUI() {
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
+            // cerrar la puerta de sonido con Escape es decir que no
+            if (gateAbierto) { respondeGate(false); return; }
             // el about gestiona su propio Escape (primero el modal, luego el)
             if (!aboutEscape()) closeOverlays();
             return;
@@ -360,8 +422,10 @@ function bindUI() {
     // politica de autoplay: el audio no puede sonar hasta el primer gesto del usuario.
     // el primer gesto EN CUALQUIER PARTE desbloquea y enciende el sonido; si el gesto es
     // sobre el boton de sonido, lo gestiona su propio handler (para no apagarlo al instante).
+    // Con la puerta de sonido abierta manda ella: si no, el clic sobre "mejor no"
+    // encenderia el sonido un instante antes de que su propio handler lo apagase.
     const unlock = (e) => {
-        if (sound.unlocked) return;
+        if (sound.unlocked || gateAbierto) return;
         if (e && e.target && e.target.closest && e.target.closest('#soundBtn')) return;
         sound.unlocked = true;
         carousel.applySound();

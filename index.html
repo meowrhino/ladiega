@@ -89,7 +89,8 @@
         <button id="playBtn" class="ctrl play-big">pause</button>
         <input id="seekBar" class="ctrl" type="range" min="0" max="1000" value="0" aria-label="progreso">
         <button id="autoBtn" class="ctrl toggle on" aria-label="avance automático">auto</button>
-        <button id="soundBtn" class="ctrl toggle on" aria-label="sonido">sound</button>
+        <!-- sin "on" de salida: applySound() lo pinta con el sonido que hay de verdad -->
+        <button id="soundBtn" class="ctrl toggle" aria-label="sonido">sound</button>
         <button id="arrowPrev" class="ctrl edge-arrow left" aria-label="video anterior"></button>
         <button id="arrowNext" class="ctrl edge-arrow right" aria-label="video siguiente"></button>
     </div>
@@ -98,6 +99,21 @@
     <div id="menuOverlay" class="overlay menu-overlay hidden">
         <button id="menuClose" class="overlay-close" aria-label="cerrar">×</button>
         <nav id="menuNav" class="menu-nav" aria-label="menú principal"></nav>
+    </div>
+
+
+    <!-- Puerta de sonido: ningun navegador deja sonar un video sin un gesto
+         previo del visitante. En vez de dejar el boton apagado y que nadie sepa
+         por que, se lo preguntamos: el clic en "si" ES ese gesto. Solo aparece
+         cuando el navegador ha bloqueado el audio de verdad -->
+    <div id="sonidoGate" class="overlay sonido-gate hidden" role="dialog" aria-modal="true" aria-labelledby="gateTitulo">
+        <div class="gate-win">
+            <p id="gateTitulo" class="gate-titulo">¿quieres escuchar la música de la diega?</p>
+            <div class="gate-botones">
+                <button id="gateSi" class="gate-btn si">sí</button>
+                <button id="gateNo" class="gate-btn no">no</button>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="js/main.js"></script>

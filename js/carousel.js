@@ -46,7 +46,7 @@ export function initCarousel(data, projects) {
     wipe = document.getElementById('wipe');
 
     setupSlides();
-    applySound();   // el boton arranca en su estado real (muted), no en el "on" del HTML
+    applySound();   // el boton arranca en su estado real: mudo hasta que haya gesto
     window.addEventListener('resize', () => slides.forEach(fitSlide));
 
     // el navegador pausa los videos al ocultar la pestaña: reanudar al volver
@@ -103,23 +103,29 @@ export function duckSound(bajito) {
     slides.forEach(s => { s.video.volume = bajito ? 0.18 : 1; });
 }
 
-// refleja el estado real del sonido en los videos y en el boton. Antes el
-// boton se pintaba con sound.on (lo que el usuario QUIERE), no con isAudible()
-// (lo que hay de verdad): arrancaba en "on" por el HTML aunque el navegador
-// aun no hubiera concedido el audio, y como nada llamaba a applySound() si el
-// intento inicial con sonido fallaba, se quedaba mintiendo hasta el primer
-// gesto. En Chrome eso pasa desapercibido porque el Media Engagement Index
-// suele dejar sonar directamente en visitas repetidas; Brave no usa ese
-// historial por privacidad, asi que el intento inicial falla siempre y el
-// boton se veia encendido sin sonar nada
+// refleja el estado real del sonido en los videos y en el boton: se pinta con
+// isAudible() (lo que suena de verdad), no con sound.on (lo que el usuario
+// quiere). Chrome suele conceder el audio de entrada en visitas repetidas por
+// su Media Engagement Index; Brave no usa ese historial por privacidad, asi que
+// ahi el intento siempre falla y quien lo arregla es la puerta de sonido
 export function applySound() {
     const on = isAudible();
     slides.forEach(s => { s.video.muted = !on; });
     if (soundBtn) soundBtn.classList.toggle('on', on);
 }
 
+// el navegador ha rechazado el audio y no hay forma de saltarselo desde aqui:
+// se lo preguntamos al visitante, que su clic si vale como gesto (la puerta la
+// levanta ui.js). Se pregunta una sola vez por visita
+let sonidoPedido = false;
+function pideSonido() {
+    if (sonidoPedido) return;
+    sonidoPedido = true;
+    document.dispatchEvent(new CustomEvent('ladiega:sinsonido'));
+}
+
 // intenta reproducir; primero CON sonido (si el navegador lo permite, queda
-// desbloqueado desde el principio) y si no, en silencio hasta el primer gesto
+// desbloqueado desde el principio) y si no, en silencio hasta que haya gesto
 function tryPlay(s) {
     const retry = () => { if (s === curSlide()) s.video.play().catch(() => {}); };
     const enSilencio = () => {
@@ -131,7 +137,9 @@ function tryPlay(s) {
         s.video.play().catch(enSilencio);
     } else if (sound.on && !sound.unlocked) {
         s.video.muted = false;
-        s.video.play().then(() => { sound.unlocked = true; applySound(); }).catch(enSilencio);
+        s.video.play()
+            .then(() => { sound.unlocked = true; applySound(); })
+            .catch(() => { enSilencio(); pideSonido(); });
     } else {
         enSilencio();
     }

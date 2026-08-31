@@ -732,6 +732,102 @@ body.title-flight .ficha {
     color: var(--dim);
 }
 
+/* ===== Puerta de sonido ===== */
+
+/* ningun navegador deja sonar un video sin un gesto previo del visitante, y no
+   hay forma de saltarselo: el clic del "si, dale" ES ese gesto. Va por encima
+   del menu porque se pregunta antes de que haya nada mas que hacer */
+.sonido-gate {
+    z-index: 80;
+}
+
+.gate-win {
+    --base: rotate(-1.2deg);
+    position: relative;
+    max-width: 560px;
+    padding: 32px 30px 30px;
+    text-align: center;
+    transform: var(--base);
+    animation: flyIn 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+/* el marco rasgado va en dos capas detras del texto: una amarilla recortada y
+   encima la misma forma en oscuro, tres pixeles mas adentro. Con un box-shadow
+   inset el clip-path se comia el trazo por donde recortaba y el borde acababa
+   siendo dos rayas sueltas fuera de la ventana */
+.gate-win::before,
+.gate-win::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    clip-path: var(--sticker);
+}
+
+.gate-win::before {
+    inset: 0;
+    background: var(--highlight);
+}
+
+.gate-win::after {
+    inset: 3px;
+    background: rgba(10, 10, 28, 0.88);
+}
+
+.gate-titulo {
+    font-size: clamp(30px, 7vw, 44px);
+    line-height: 1.05;
+    color: var(--highlight);
+    text-shadow: 3px 3px 0 #000;
+}
+
+.gate-botones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 26px;
+}
+
+/* cada boton entra desde su lado y se ladea al suyo, como el resto de la casa */
+.gate-btn {
+    min-width: 104px;
+    font-size: 28px;
+    line-height: 1;
+    padding: 5px 24px 8px;
+    transition: transform 0.15s ease, color 0.15s ease;
+    animation: flyIn 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) 0.12s both;
+}
+
+.gate-btn.si {
+    --base: rotate(-2deg);
+    --ix: -70px;
+    --iy: 40px;
+    background: var(--highlight);
+    color: #000;
+    clip-path: var(--sticker);
+    transform: var(--base);
+}
+
+.gate-btn.no {
+    --base: rotate(1.6deg);
+    --ix: 70px;
+    --iy: 40px;
+    color: var(--dim);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.28);
+    transform: var(--base);
+}
+
+.gate-btn:hover,
+.gate-btn:focus-visible {
+    transform: var(--base) scale(1.08);
+    outline: none;
+}
+
+.gate-btn.no:hover,
+.gate-btn.no:focus-visible {
+    color: var(--highlight);
+}
+
 /* ===== Overlays ===== */
 .overlay {
     position: fixed;
