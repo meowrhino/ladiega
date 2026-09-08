@@ -224,25 +224,13 @@ function buzz() {
 
 /* ===== Puerta de sonido ===== */
 
-// quien dice que no se queda sin que le pregunten en las siguientes visitas;
-// el "si" no se guarda porque no sirve de nada: el gesto hace falta cada vez
-const RECUERDO = 'ladiega:sonido';
-
-function dijoQueNo() {
-    try { return localStorage.getItem(RECUERDO) === 'no'; } catch (e) { return false; }
-}
-
-function apunta(v) {
-    try { localStorage.setItem(RECUERDO, v); } catch (e) { /* sin sitio donde apuntar */ }
-}
-
+// la respuesta no se apunta en ninguna parte: la musica es media web, asi que
+// se pregunta en cada visita. Quien dijo que no ayer a lo mejor iba en el metro,
+// y quien dijo que si tiene que volver a decirlo igualmente: el navegador exige
+// un gesto nuevo cada vez, y ese clic es justo lo que la puerta esta pidiendo
 let gateAbierto = false;
 
 function bindGate() {
-    // el "no" de otra visita se respeta desde el arranque, no solo escondiendo
-    // la puerta: si no, en un navegador que si concede el audio de entrada el
-    // video empezaria a sonarle a quien ya habia dicho que no queria
-    if (dijoQueNo()) sound.on = false;
     // el carrusel avisa cuando el navegador le ha rechazado el audio
     document.addEventListener('ladiega:sinsonido', abreGate);
     document.getElementById('gateSi').addEventListener('click', () => respondeGate(true));
@@ -250,7 +238,7 @@ function bindGate() {
 }
 
 function abreGate() {
-    if (gateAbierto || dijoQueNo()) return;
+    if (gateAbierto) return;
     gateAbierto = true;
     sonidoGate.classList.remove('hidden');
     // sin controles ni titulo gigante detras del difuminado mientras se pregunta
@@ -274,8 +262,6 @@ function respondeGate(quiere) {
         const v = carousel.curSlide().video;
         if (v.paused) v.play().catch(() => {});
         playSfx('select');
-    } else {
-        apunta('no');
     }
 }
 
