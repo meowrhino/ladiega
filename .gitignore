@@ -1,2 +1,5 @@
 .claude/
 .DS_Store
+
+# La web generada: la escribe node build/build.mjs y la publica la Action
+dist/

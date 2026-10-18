@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "data/site.json: la web",
+  "description": "data/site.json: lo general de la web y qué proyectos salen, en qué categoría y en qué orden. VS Code lee este fichero (por el \"$schema\" de arriba del JSON) para autocompletar, explicar cada campo y subrayar lo que está mal; el build y la vista previa lo usan para revisar.",
+  "type": "object",
+  "required": ["categories", "lists", "about", "contact"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "_": { "type": "string" },
+    "url": { "type": "string", "pattern": "^https://", "description": "El dominio, sin barra al final: \"https://ladiega.com\". Con él, Google indexa la web." },
+    "categories": { "type": "object", "description": "El nombre de cada categoría en el menú: { \"music\": \"music\" }", "additionalProperties": { "type": "string" } },
+    "lists": { "type": "object", "description": "Las categorías, en el orden del menú, y en cada una sus proyectos, en orden: el nombre de su carpeta en projects/.", "additionalProperties": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9-]+$" } } },
+    "about": {
+      "type": "object", "additionalProperties": false, "required": ["title", "name"],
+      "description": "La ficha del about (la del sintetizador). Los faders (música / diseño sonoro / papeleo) están en ABOUT_STATS, dentro de js/about.js.",
+      "properties": {
+        "title": { "type": "string", "description": "Lo que pone en el menú: \"about\"" },
+        "name": { "type": "string", "description": "El nombre de la ficha: \"la diega\"" },
+        "class": { "type": "string", "description": "Debajo del nombre: \"compositora · diseñadora sonora\"" }
+      }
+    },
+    "contact": {
+      "type": "object", "additionalProperties": false, "required": ["label", "name", "email", "text"],
+      "description": "La gestoría: la ficha de debajo del about, sin sinte.",
+      "properties": {
+        "label": { "type": "string", "description": "Lo que pone en el menú: \"gestoría\"" },
+        "name": { "type": "string", "description": "El nombre de la ficha." },
+        "class": { "type": "string", "description": "Debajo del nombre (puede no estar)." },
+        "email": { "type": "string", "description": "El correo. Se cambia aquí y cambia en toda la web." },
+        "text": { "type": "string", "description": "El texto. La palabra entre llaves, {contáctame}, es el enlace que abre el correo." }
+      }
+    }
+  }
+}

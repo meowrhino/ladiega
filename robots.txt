@@ -1,5 +1,0 @@
-# ESTA ES LA COPIA. El sitio bueno es https://ladiega.com — que Google no
-# indexe esta para que no compitan. (En el repo de la diega, ladiegaog/web,
-# este mismo archivo lleva "Allow: /".)
-User-agent: *
-Disallow: /

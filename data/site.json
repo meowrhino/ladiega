@@ -1,0 +1,38 @@
+{
+  "$schema": "../schema/site.json",
+  "url": "https://ladiega.com",
+  "categories": {
+    "music": "music",
+    "brands": "brands"
+  },
+  "lists": {
+    "music": [
+      "menudas-piezas",
+      "samantha",
+      "amor-butano"
+    ],
+    "brands": [
+      "purple-1",
+      "purple-2",
+      "pull-and-bear",
+      "massimo-dutti",
+      "nike",
+      "adolfo-dominguez",
+      "pacsun",
+      "timberland",
+      "loewe",
+      "oysho"
+    ]
+  },
+  "about": {
+    "title": "about",
+    "name": "la diega",
+    "class": "compositora · diseñadora sonora"
+  },
+  "contact": {
+    "label": "gestoría",
+    "name": "la gestoría",
+    "email": "diego.fd.92@gmail.com",
+    "text": "si eres autónomx y necesitas ayuda con impuestos, papeleo, contabilidad, etc, {contáctame}"
+  }
+}

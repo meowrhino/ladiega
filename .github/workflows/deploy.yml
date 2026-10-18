@@ -1,0 +1,72 @@
+# Cada push a main regenera la web y la publica en GitHub Pages. Corre en las
+# dos copias (no Workers: no sirve los vídeos por partes, y la barra no salta):
+# en la nuestra sale en meowrhino.github.io/ladiega/ sin indexar; en la
+# de la diega, en su dominio (build/build.mjs lo decide por el dueño del repo).
+name: build & deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write     # el aviso de un build que falla (abajo)
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '22' }
+      # lo que dice el build va tambien a build.log: si falla, sale en un issue
+      - run: node build/build.mjs 2>&1 | tee build.log
+        shell: bash
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with: { path: dist }
+
+      # Si el build falla, un issue con el error, para verlo al entrar al repo
+      # (uno abierto a la vez; los siguientes fallos, como comentarios). Se
+      # cierra solo cuando vuelve a publicarse. Como arreglarlo: CLAUDE.md.
+      - name: avisar del error en un issue
+        if: failure()
+        continue-on-error: true   # el aviso nunca impide publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRO: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GUIA: ${{ github.server_url }}/${{ github.repository }}/blob/main/CLAUDE.md
+        run: |
+          errores=$(grep -E '^(✗|⚠)' build.log 2>/dev/null || tail -n 20 build.log 2>/dev/null || echo 'fallo antes del build: mira el registro')
+          cuerpo=$(printf 'El push %s no se ha publicado: la web sigue como estaba.\n\n```\n%s\n```\n\n[El registro entero](%s) · [cómo arreglarlo](%s) ("Si el build falla")' "${GITHUB_SHA::7}" "$errores" "$REGISTRO" "$GUIA")
+          n=$(gh issue list --state open --label build --json number -q '.[0].number')
+          if [ -n "$n" ]; then gh issue comment "$n" --body "$cuerpo"
+          else
+            gh label create build --color B60205 --description 'la web no se ha publicado' --force
+            gh issue create --title 'La web no se ha publicado' --label build --body "$cuerpo"
+          fi
+      - name: cerrar el aviso, si lo hay
+        if: success()
+        continue-on-error: true   # el aviso nunca impide publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list --state open --label build --json number -q '.[].number'); do
+            gh issue close "$n" --comment "Arreglado: ${GITHUB_SHA::7} ya está publicado."
+          done
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5

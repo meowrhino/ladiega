@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "projects/<nombre>/project.json: un proyecto",
+  "description": "projects/<nombre>/project.json: un proyecto. Su vídeo, video.webm, en la misma carpeta. VS Code lee este fichero (por el \"$schema\" de arriba del JSON) para autocompletar, explicar cada campo y subrayar lo que está mal; el build y la vista previa lo usan para revisar.",
+  "type": "object",
+  "required": ["title", "role"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "_": { "type": "string" },
+    "title": { "type": "string", "description": "El título: sale gigante al cambiar de vídeo. \"MENUDAS PIEZAS OST\"" },
+    "role": { "type": "string", "description": "Qué hizo la diega: sale en la ficha técnica, abajo a la izquierda. \"Music & SFX\"" },
+    "studio": { "type": "string", "description": "El estudio o la marca, en la ficha técnica (puede no estar)." },
+    "start": { "type": "number", "minimum": 0, "description": "El segundo en que empieza el bucle que se ve cuando nadie toca el vídeo. Sin este campo, 0." },
+    "finish": { "type": ["number", "null"], "minimum": 0, "description": "El segundo en que acaba ese bucle. Sin este campo, hasta el final." },
+    "highlight": { "type": "boolean", "description": "false: no sale en el carrusel de la home (sí en su categoría). Sin este campo, sale." },
+    "visible": { "type": "boolean", "description": "false: no sale en ningún sitio (para dejar proyectos preparados). Sin este campo, sale." }
+  }
+}
