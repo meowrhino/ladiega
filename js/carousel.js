@@ -364,10 +364,19 @@ export function playWipe(alTapar) {
 
 /* ===== Vistas ===== */
 
+// el carrusel sale barajado cada vez (Fisher-Yates): ni el primero ni el orden se repiten
+function shuffle(list) {
+    for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+}
+
 export function goHome(instant = false) {
     mode = 'home';
     const highlights = allProjects.filter(p => p.highlight);
-    playlist = highlights.length ? highlights : allProjects.slice();
+    playlist = shuffle(highlights.length ? highlights : allProjects.slice());
     index = 0;
     updateModeUI();
     hooks.closeOverlays();
@@ -378,7 +387,7 @@ export function goCategory(slug) {
     const list = allProjects.filter(p => p.category === slug);
     if (!list.length) return;
     mode = 'category';
-    playlist = list;
+    playlist = shuffle(list);
     index = 0;
     updateModeUI();
     hooks.closeOverlays();
