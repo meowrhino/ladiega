@@ -1,0 +1,6 @@
+{
+  // Sync: si en GitHub hay un commit que aquí no está (uno nuestro), el suyo se
+  // pone encima sin preguntar. Y no bajar etiquetas, que git no se queje.
+  "git.rebaseWhenSync": true,
+  "git.pullTags": false
+}
